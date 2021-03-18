@@ -134,7 +134,6 @@ Frustration
 Vendetta
 Absolution
 Vengeance
-Naming Conventions Are Only Suggestions
 Friend-Shaped Hole-Maker
 Lindbergh
 Zephyrus
@@ -156,7 +155,6 @@ Shuckydarn
 Bonaventure
 Memories of Loyavas
 Busto the Unfathomable
-Good Names Are Hard to Remember
 Beantown
 Del Mardos
 Soul for a Sword
@@ -184,10 +182,8 @@ Pursuit of Profit
 Wavebird
 Earhart
 Necessary Violence
-I Couldn’t Think of a Longer Name that Could Fit On the Screen
 Worldstrider
 Voidstrider
-Spacey McShipspace
 Aurora
 Anderson
 Catfish
@@ -201,7 +197,7 @@ Bellanova
 Double October
 Flight of Fancy
 Hope Rides High
-Not Exploding Means She's Good to Go
+Good to Go
 Unsavory Implications
 Melonrunner
 The Bottle is the Ship
@@ -245,4 +241,4 @@ Quillonan
 Magee
 Oberth
 Highchurch
-Conastoga
+Conestoga
