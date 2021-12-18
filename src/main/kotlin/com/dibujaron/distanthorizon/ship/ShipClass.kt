@@ -29,6 +29,8 @@ class ShipClass(
     val dockingPortCount: Int = properties.getProperty("dockingPortCount").toInt()
     val holdSize: Int = properties.getProperty("holdSize").toInt()
     val price: Int = properties.getProperty("price").toInt()
+    val fuelTankSize: Int = properties.getProperty("fuelTankSize").toInt()
+    val fuelBurnRate: Double = properties.getProperty("fuelBurnRate").toDouble()
     val dockingPorts = generateSequence(0) { it + 1 }
         .take(dockingPortCount)
         .map {
@@ -65,6 +67,7 @@ class ShipClass(
         retval.put("manu_engine_thrust", manuThrust)
         retval.put("rotation_power", rotationPower)
         retval.put("price", getPurchaseCost(player.ship.type))
+        retval.put("fuel_tank_size", fuelTankSize)
         val colorsJson = JSONArray()
         for (primaryColor in primaryColors) {
             for (secondaryColor in secondaryColors) {
@@ -104,7 +107,7 @@ class ShipClass(
         return retval
     }
 
-    fun getGoodRandomColors(): Pair<ShipColor, ShipColor>
+    fun getGoodColorScheme(): ColorScheme
     {
         //return Pair(this.primaryColors[0],this.secondaryColors[0])
         var primaryColor = this.primaryColors.random()
@@ -115,7 +118,7 @@ class ShipClass(
             secondaryColor = this.secondaryColors.random()
             tries++
         }
-        return Pair(primaryColor, secondaryColor)
+        return ColorScheme(primaryColor, secondaryColor)
     }
 
 }

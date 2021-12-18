@@ -75,6 +75,7 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DhDatabase {
         val shipClass: Column<String> = varchar("ship_class", 32)
         val primaryColor: Column<Int> = integer("primary_color")
         val secondaryColor: Column<Int> = integer("secondary_color")
+        val fuelLevel: Column<Double> = double("fuel_level")
         val holdQtyBioCells: Column<Int> = integer(CommodityType.BIO_CELLS.identifyingName).default(0)
         val holdQtyCopper: Column<Int> = integer(CommodityType.COPPER.identifyingName).default(0)
         val holdQtyThorium: Column<Int> = integer(CommodityType.THORIUM.identifyingName).default(0)

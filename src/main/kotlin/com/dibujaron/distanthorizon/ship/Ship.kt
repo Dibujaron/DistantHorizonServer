@@ -16,15 +16,14 @@ import com.dibujaron.distanthorizon.player.PlayerManager
 import com.dibujaron.distanthorizon.player.wallet.Wallet
 import org.json.JSONObject
 import java.util.*
-import kotlin.collections.HashMap
 import kotlin.math.pow
 
 open class Ship(
     val dbHook: ShipInfo?,
     val type: ShipClass,
-    private val primaryColor: ShipColor,
-    private val secondaryColor: ShipColor,
+    private val colorScheme: ColorScheme,
     private val hold: MutableMap<CommodityType, Int>,
+    var fuelLevel: Double,
     initialState: ShipState,
     val pilot: Player?
 ) {
@@ -32,18 +31,10 @@ open class Ship(
     constructor(
         dbHook: ShipInfo?,
         type: ShipClass,
+        fuelLevel: Double,
         initialState: ShipState,
         pilot: Player?
-    ) : this(dbHook, type, type.getGoodRandomColors(), type.generateRandomHoldMap(), initialState, pilot)
-
-    constructor(
-        dbHook: ShipInfo?,
-        type: ShipClass,
-        colors: Pair<ShipColor, ShipColor>,
-        hold: MutableMap<CommodityType, Int>,
-        initialState: ShipState,
-        pilot: Player?
-    ) : this(dbHook, type, colors.first, colors.second, hold, initialState, pilot)
+    ) : this(dbHook, type, type.getGoodColorScheme(), type.generateRandomHoldMap(), fuelLevel, initialState, pilot)
 
     var currentState: ShipState = initialState
     val uuid = UUID.randomUUID()
@@ -92,6 +83,9 @@ open class Ship(
     fun tick() {
         val dockedTo = dockedToPort
         val dockedFrom = myDockedPort
+        if(controls.mainEnginesActive){
+            fuelLevel = if(fuelLevel < type.fuelBurnRate) 0.0 else fuelLevel - type.fuelBurnRate
+        }
         currentState = if (dockedTo != null && dockedFrom != null) {
             val velocity = dockedTo.getVelocity()
             val myPortRelative = dockedFrom.relativePosition()
@@ -111,8 +105,10 @@ open class Ship(
         var globalPos = currentState.position
         var rotation = currentState.rotation
         //velocity
-        if (controls.mainEnginesActive) {
-            velocity += Vector2(0, -type.mainThrust).rotated(rotation) * delta
+        if(fuelLevel > 0) {
+            if (controls.mainEnginesActive) {
+                velocity += Vector2(0, -type.mainThrust).rotated(rotation) * delta
+            }
         }
         if (controls.stbdThrustersActive) {
             velocity += Vector2(-type.manuThrust, 0).rotated(rotation) * delta
@@ -146,8 +142,9 @@ open class Ship(
         retval.put("main_engine_thrust", type.mainThrust)
         retval.put("manu_engine_thrust", type.manuThrust)
         retval.put("rotation_power", type.rotationPower)
-        retval.put("primary_color", primaryColor.toJSON())
-        retval.put("secondary_color", secondaryColor.toJSON())
+        retval.put("fuel_tank_size", type.fuelTankSize)
+        retval.put("primary_color", colorScheme.primaryColor.toJSON())
+        retval.put("secondary_color", colorScheme.secondaryColor.toJSON())
         retval.put("docking_ports", myDockingPorts.asSequence().map { it.toJSON() }.toList())
         retval.put("docked", isDocked())
         if (isDocked()) {
@@ -170,6 +167,7 @@ open class Ship(
         retval.put("aft_thrusters", controls.aftThrustersActive)
         retval.put("rotating_left", controls.tillerLeft)
         retval.put("rotating_right", controls.tillerRight)
+        retval.put("fuel_level", fuelLevel)
         return retval
     }
 
@@ -215,7 +213,9 @@ open class Ship(
         scriptWriter?.completeScript(stationPort.station)
         pilot?.actorInfo?.let {
             if (updateLastDocked) {
-                DHServer.getDatabase().getPersistenceDatabase().updateActorLastDockedStation(it, stationPort.station)
+                DHServer.getDatabase()
+                    .getPersistenceDatabase()
+                    .updateActorDockedStationAndShipFuel(it, stationPort.station, fuelLevel)
                 println("Updated last docked station of ${pilot.actorInfo?.displayName} to ${stationPort.station.name}")
             }
         }
@@ -287,13 +287,14 @@ open class Ship(
     companion object {
         fun createGuestShip(player: Player): Ship {
             val shipClass = ShipClassManager.getShipClass(DHServer.playerStartingShip)!!
-            val colors = shipClass.getGoodRandomColors()
+            val colors = shipClass.getGoodColorScheme()
+            val fuelLevel = shipClass.fuelTankSize
             return Ship(
                 null,
                 shipClass,
-                colors.first,
-                colors.second,
-                HashMap(),
+                colors,
+                EnumMap(CommodityType::class.java),
+                fuelLevel.toDouble(),
                 getStartingOrbit(),
                 player
             )
@@ -304,15 +305,15 @@ open class Ship(
             return Ship(
                 savedShip,
                 savedShip.shipClass,
-                savedShip.primaryColor,
-                savedShip.secondaryColor,
-                savedShip.holdMap,
+                ColorScheme(savedShip.primaryColor, savedShip.secondaryColor),
+                savedShip.holdMap.toMutableMap(),
+                savedShip.fuelLevel,
                 getStartingOrbit(),
                 player
             )
         }
 
-        public fun getStartingOrbit(): ShipState {
+        fun getStartingOrbit(): ShipState {
             val startingPlanetName = DHServer.startingPlanetName
             val startingPlanet: Planet = OrbiterManager.getPlanet(startingPlanetName)
                 ?: throw IllegalArgumentException("starting planet $startingPlanetName is null.")

@@ -8,6 +8,7 @@ import com.dibujaron.distanthorizon.database.persistence.ShipInfo
 import com.dibujaron.distanthorizon.orbiter.CommodityType
 import com.dibujaron.distanthorizon.orbiter.OrbiterManager
 import com.dibujaron.distanthorizon.orbiter.Station
+import com.dibujaron.distanthorizon.ship.ColorScheme
 import com.dibujaron.distanthorizon.ship.ShipClass
 import com.dibujaron.distanthorizon.ship.ShipClassManager
 import com.dibujaron.distanthorizon.ship.ShipColor
@@ -74,8 +75,9 @@ class ExPersistenceDatabase : PersistenceDatabase {
         shipClass: ShipClass,
         primaryColor: ShipColor,
         secondaryColor: ShipColor,
-        holdMap: MutableMap<CommodityType, Int>
-    ) : ShipInfo(shipClass, primaryColor, secondaryColor, holdMap)
+        holdMap: Map<CommodityType, Int>,
+        fuelLevel: Double
+    ) : ShipInfo(shipClass, primaryColor, secondaryColor, holdMap, fuelLevel)
 
     private fun mapActorInfo(row: ResultRow): ActorInfoInternal {
         return ActorInfoInternal(
@@ -100,19 +102,20 @@ class ExPersistenceDatabase : PersistenceDatabase {
             ShipClassManager.getShipClassRequired(row[ExDatabase.Ship.shipClass]),
             ShipColor.fromInt(row[ExDatabase.Ship.primaryColor]),
             ShipColor.fromInt(row[ExDatabase.Ship.secondaryColor]),
-            holdMap
+            holdMap,
+            row[ExDatabase.Ship.fuelLevel]
         )
     }
 
     override fun createNewActorForAccount(accountInfo: AccountInfo, actorDisplayName: String): AccountInfo {
         if (accountInfo is AccountInfoInternal) {
             val acctId = accountInfo.id
-            val colors = ShipClassManager.getShipClass(DHServer.playerStartingShip)!!.getGoodRandomColors()
+            val colors = ShipClassManager.getShipClass(DHServer.playerStartingShip)!!.getGoodColorScheme()
             val shipId = transaction {
                 ExDatabase.Ship.insertAndGetId {
                     it[shipClass] = DHServer.playerStartingShip
-                    it[primaryColor] = colors.first.toInt()//ShipColor(Color(0,148,255)),
-                    it[secondaryColor] = colors.second.toInt()
+                    it[primaryColor] = colors.primaryColor.toInt()//ShipColor(Color(0,148,255)),
+                    it[secondaryColor] = colors.secondaryColor.toInt()
                 }
             }
             transaction {
@@ -151,8 +154,8 @@ class ExPersistenceDatabase : PersistenceDatabase {
     override fun updateShipOfActor(
         actor: ActorInfo,
         sc: ShipClass,
-        primColor: ShipColor,
-        secColor: ShipColor
+        colorScheme: ColorScheme,
+        newFuelLevel: Double
     ): ActorInfo? {
         if (actor is ActorInfoInternal) {
             val oldShip = actor.ship
@@ -161,8 +164,9 @@ class ExPersistenceDatabase : PersistenceDatabase {
                 transaction {
                     ExDatabase.Ship.update({ shipIdFilter }) {
                         it[shipClass] = sc.qualifiedName
-                        it[primaryColor] = primColor.toInt()
-                        it[secondaryColor] = secColor.toInt()
+                        it[primaryColor] = colorScheme.primaryColor.toInt()
+                        it[secondaryColor] = colorScheme.secondaryColor.toInt()
+                        it[fuelLevel] = newFuelLevel
                     }
                 }
                 return transaction {
@@ -200,12 +204,17 @@ class ExPersistenceDatabase : PersistenceDatabase {
         throw java.lang.IllegalStateException("Object must be from same db")
     }
 
-    override fun updateActorLastDockedStation(actor: ActorInfo, station: Station): ActorInfo? {
+    override fun updateActorDockedStationAndShipFuel(actor: ActorInfo, station: Station, newFuelLevel: Double): ActorInfo? {
         if (actor is ActorInfoInternal) {
             val actorIdFilter = (ExDatabase.Actor.id eq actor.id)
+            val ship = actor.ship as ShipInfoInternal
+            val shipIdFilter = (ExDatabase.Ship.id eq ship.id)
             transaction {
                 ExDatabase.Actor.update({ actorIdFilter }) {
                     it[lastDockedStation] = station.name
+                }
+                ExDatabase.Ship.update({shipIdFilter}){
+                    it[fuelLevel] = newFuelLevel
                 }
             }
             return transaction {

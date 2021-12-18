@@ -17,6 +17,7 @@ import com.dibujaron.distanthorizon.ship.*
 import io.javalin.websocket.WsContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.awt.Color
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -188,26 +189,27 @@ class Player(val connection: WsContext) : CommandSender {
             val newBalance = wallet.getBalance() - cost
             if (newBalance > 0) {
                 wallet.setBalance(newBalance)
-                updateShip(ShipClassManager.getShipClass(qualName)!!, color1, color2)
+                updateShip(ShipClassManager.getShipClass(qualName)!!, ColorScheme(color1, color2))
             }
             queueSendStationMenuMessage()
         }
     }
 
-    fun updateShip(shipClass: ShipClass, primaryColor: ShipColor, secondaryColor: ShipColor) {
+    fun updateShip(shipClass: ShipClass, colorScheme: ColorScheme) {
         println("updating ship")
         val actor = actorInfo
         var dbHook: ShipInfo? = null
         if (actor != null) {
             println("updating ship in database.")
             val newActor = DHServer.getDatabase().getPersistenceDatabase()
-                .updateShipOfActor(actor, shipClass, primaryColor, secondaryColor)
+                .updateShipOfActor(actor, shipClass, colorScheme, shipClass.fuelTankSize.toDouble())
             dbHook = newActor?.ship
         }
-        val newShip = Ship(dbHook, shipClass, primaryColor, secondaryColor, HashMap(), Ship.getStartingOrbit(), this)
+        val newHold: MutableMap<CommodityType, Int> = EnumMap(CommodityType::class.java)
+        val newShip = Ship(dbHook, shipClass, colorScheme, newHold, shipClass.fuelTankSize.toDouble(), ship.currentState, this)
         val oldShip = ship
         ship = newShip
-        newShip.currentState = oldShip.currentState
+        //newShip.currentState = oldShip.currentState //todo why was this done here? originally ship.currentState above was getStartingOrbit()
         ShipManager.addShip(newShip)
         newShip.dock(newShip.myDockingPorts.random(), oldShip.dockedToPort!!)
         ShipManager.removeShip(oldShip)

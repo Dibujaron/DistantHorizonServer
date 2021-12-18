@@ -5,7 +5,9 @@ import com.dibujaron.distanthorizon.database.script.ScriptReader
 class AIShip(private val scriptReader: ScriptReader) : Ship(
     null,
     scriptReader.getShipClass(),
-    scriptReader.getStartingState(), null
+    scriptReader.getShipClass().fuelTankSize.toDouble(),
+    scriptReader.getStartingState(),
+    null
 ) {
 
     override fun computeNextState(): ShipState {
