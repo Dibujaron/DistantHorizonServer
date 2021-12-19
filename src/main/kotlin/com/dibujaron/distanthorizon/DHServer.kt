@@ -71,7 +71,7 @@ object DHServer {
         "jdbc:postgresql://localhost/distant_horizon?user=postgres&password=admin"
     )
     val dbDriver = serverProperties.getProperty("database.driver", "org.postgresql.Driver")
-
+    val shipNames = loadShipNames();
     init {
         sendBalancerPing()
         CommandManager.moduleInit()
@@ -357,5 +357,9 @@ object DHServer {
             .forEach { factors.add(it) }
         factors.add(num)
         return factors
+    }
+
+    private fun loadShipNames(): List<String>{
+        return File("./ship_names.txt").readLines()
     }
 }

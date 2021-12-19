@@ -73,11 +73,12 @@ class ExPersistenceDatabase : PersistenceDatabase {
     inner class ShipInfoInternal(
         val id: EntityID<Int>,
         shipClass: ShipClass,
+        shipName: String,
         primaryColor: ShipColor,
         secondaryColor: ShipColor,
         holdMap: Map<CommodityType, Int>,
         fuelLevel: Double
-    ) : ShipInfo(shipClass, primaryColor, secondaryColor, holdMap, fuelLevel)
+    ) : ShipInfo(shipClass, shipName, primaryColor, secondaryColor, holdMap, fuelLevel)
 
     private fun mapActorInfo(row: ResultRow): ActorInfoInternal {
         return ActorInfoInternal(
@@ -100,6 +101,7 @@ class ExPersistenceDatabase : PersistenceDatabase {
         return ShipInfoInternal(
             row[ExDatabase.Ship.id],
             ShipClassManager.getShipClassRequired(row[ExDatabase.Ship.shipClass]),
+            row[ExDatabase.Ship.shipName],
             ShipColor.fromInt(row[ExDatabase.Ship.primaryColor]),
             ShipColor.fromInt(row[ExDatabase.Ship.secondaryColor]),
             holdMap,
@@ -115,6 +117,7 @@ class ExPersistenceDatabase : PersistenceDatabase {
             val shipId = transaction {
                 ExDatabase.Ship.insertAndGetId {
                     it[shipClass] = DHServer.playerStartingShip
+                    it[shipName] = DHServer.shipNames.random()
                     it[primaryColor] = colors.primaryColor.toInt()//ShipColor(Color(0,148,255)),
                     it[secondaryColor] = colors.secondaryColor.toInt()
                     it[fuelLevel] = startingShipClass.fuelTankSize.toDouble()
@@ -156,6 +159,7 @@ class ExPersistenceDatabase : PersistenceDatabase {
     override fun updateShipOfActor(
         actor: ActorInfo,
         sc: ShipClass,
+        name: String,
         colorScheme: ColorScheme,
         newFuelLevel: Double
     ): ActorInfo? {
@@ -166,6 +170,7 @@ class ExPersistenceDatabase : PersistenceDatabase {
                 transaction {
                     ExDatabase.Ship.update({ shipIdFilter }) {
                         it[shipClass] = sc.qualifiedName
+                        it[shipName] = name
                         it[primaryColor] = colorScheme.primaryColor.toInt()
                         it[secondaryColor] = colorScheme.secondaryColor.toInt()
                         it[fuelLevel] = newFuelLevel

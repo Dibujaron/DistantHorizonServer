@@ -13,6 +13,7 @@ interface PersistenceDatabase {
     fun updateShipOfActor(
         actor: ActorInfo,
         sc: ShipClass,
+        name: String,
         colorScheme: ColorScheme,
         fuelLevel: Double
     ): ActorInfo?

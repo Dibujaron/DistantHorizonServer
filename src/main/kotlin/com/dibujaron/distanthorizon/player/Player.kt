@@ -187,6 +187,7 @@ class Player(val connection: WsContext) : CommandSender {
         } else if (messageType == "buy_ship") {
             println("got buy ship message")
             val qualName = message.getString("ship_class_qualified_name")
+            val name = message.getString("ship_name")
             val color1 = ShipColor.fromJSON(message.getJSONObject("primary_color"))
             val color2 = ShipColor.fromJSON(message.getJSONObject("secondary_color"))
             val newShipClass = ShipClassManager.getShipClass(qualName)!!
@@ -195,24 +196,24 @@ class Player(val connection: WsContext) : CommandSender {
             val newBalance = wallet.getBalance() - cost
             if (newBalance > 0) {
                 wallet.setBalance(newBalance)
-                updateShip(ShipClassManager.getShipClass(qualName)!!, ColorScheme(color1, color2))
+                updateShip(ShipClassManager.getShipClass(qualName)!!, name, ColorScheme(color1, color2))
             }
             queueSendStationMenuMessage()
         }
     }
 
-    fun updateShip(shipClass: ShipClass, colorScheme: ColorScheme) {
+    fun updateShip(shipClass: ShipClass, name: String, colorScheme: ColorScheme) {
         println("updating ship")
         val actor = actorInfo
         var dbHook: ShipInfo? = null
         if (actor != null) {
             println("updating ship in database.")
             val newActor = DHServer.getDatabase().getPersistenceDatabase()
-                .updateShipOfActor(actor, shipClass, colorScheme, shipClass.fuelTankSize.toDouble())
+                .updateShipOfActor(actor, shipClass, name, colorScheme, shipClass.fuelTankSize.toDouble())
             dbHook = newActor?.ship
         }
         val newHold: MutableMap<CommodityType, Int> = EnumMap(CommodityType::class.java)
-        val newShip = Ship(dbHook, shipClass, colorScheme, newHold, shipClass.fuelTankSize.toDouble(), ship.currentState, this)
+        val newShip = Ship(dbHook, shipClass, name, colorScheme, newHold, shipClass.fuelTankSize.toDouble(), ship.currentState, this)
         val oldShip = ship
         ship = newShip
         //newShip.currentState = oldShip.currentState //todo why was this done here? originally ship.currentState above was getStartingOrbit()

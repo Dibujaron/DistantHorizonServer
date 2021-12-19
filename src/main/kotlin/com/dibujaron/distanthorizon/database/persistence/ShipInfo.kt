@@ -7,6 +7,7 @@ import org.json.JSONObject
 
 open class ShipInfo(
     val shipClass: ShipClass,
+    val name: String,
     val primaryColor: ShipColor,
     val secondaryColor: ShipColor,
     val holdMap: Map<CommodityType, Int>,
@@ -15,6 +16,7 @@ open class ShipInfo(
     open fun toJSON(): JSONObject {
         val r = JSONObject()
         r.put("ship_class", shipClass.qualifiedName)
+        r.put("ship_name", name)
         r.put("primary_color", primaryColor.toJSON())
         r.put("secondary_color", secondaryColor.toJSON())
         r.put("fuel_level", fuelLevel)

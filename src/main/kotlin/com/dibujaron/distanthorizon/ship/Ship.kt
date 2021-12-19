@@ -21,6 +21,7 @@ import kotlin.math.pow
 open class Ship(
     val dbHook: ShipInfo?,
     val type: ShipClass,
+    val name: String,
     private val colorScheme: ColorScheme,
     private val hold: MutableMap<CommodityType, Int>,
     var fuelLevel: Double,
@@ -31,10 +32,11 @@ open class Ship(
     constructor(
         dbHook: ShipInfo?,
         type: ShipClass,
+        name: String,
         fuelLevel: Double,
         initialState: ShipState,
         pilot: Player?
-    ) : this(dbHook, type, type.getGoodColorScheme(), type.generateRandomHoldMap(), fuelLevel, initialState, pilot)
+    ) : this(dbHook, type, name, type.getGoodColorScheme(), type.generateRandomHoldMap(), fuelLevel, initialState, pilot)
 
     var currentState: ShipState = initialState
     val uuid = UUID.randomUUID()
@@ -147,6 +149,7 @@ open class Ship(
     fun createFullShipJSON(): JSONObject {
         val retval = createShipHeartbeatJSON()
         retval.put("type", type.qualifiedName)
+        retval.put("ship_name", name)
         retval.put("hold_size", type.holdSize)
         retval.put("main_engine_thrust", type.mainThrust)
         retval.put("manu_engine_thrust", type.manuThrust)
@@ -311,6 +314,7 @@ open class Ship(
             return Ship(
                 null,
                 shipClass,
+                DHServer.shipNames.random(),
                 colors,
                 EnumMap(CommodityType::class.java),
                 fuelLevel.toDouble(),
@@ -324,6 +328,7 @@ open class Ship(
             return Ship(
                 savedShip,
                 savedShip.shipClass,
+                savedShip.name,
                 ColorScheme(savedShip.primaryColor, savedShip.secondaryColor),
                 savedShip.holdMap.toMutableMap(),
                 savedShip.fuelLevel,

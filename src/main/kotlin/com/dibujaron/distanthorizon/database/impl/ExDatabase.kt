@@ -73,6 +73,7 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DhDatabase {
 
     object Ship: IntIdTable("ship_instance") {
         val shipClass: Column<String> = varchar("ship_class", 32)
+        val shipName: Column<String> = varchar("ship_name", 64)
         val primaryColor: Column<Int> = integer("primary_color")
         val secondaryColor: Column<Int> = integer("secondary_color")
         val fuelLevel: Column<Double> = double("fuel_level")
