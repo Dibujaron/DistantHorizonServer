@@ -171,6 +171,12 @@ class Player(val connection: WsContext) : CommandSender {
                 println("${getDisplayName()} sold $quantity of $commodity from station, new balance is ${wallet.getBalance()}")
                 queueSendStationMenuMessage()
             }
+        } else if (messageType == "purchase_fuel") {
+            if(ship.isDocked()){
+                val quantity = message.getInt("quantity")
+                ship.purchaseFuelFromStation(wallet, quantity)
+                queueSendStationMenuMessage()
+            }
         } else if (messageType == "chat") {
             val payload = message.getString("payload")
             val event = PlayerChatEvent(this, payload)
@@ -229,6 +235,8 @@ class Player(val connection: WsContext) : CommandSender {
             myMessage.put("station_info", stationInfo)
             myMessage.put("player_balance", wallet.getBalance())
             myMessage.put("hold_space", ship.holdCapacity - ship.holdOccupied())
+            myMessage.put("fuel_tank_size", ship.type.fuelTankSize)
+            myMessage.put("fuel_level", ship.fuelLevel)
             val holdInfo: JSONObject = ship.createHoldStatusMessage()
             myMessage.put("hold_contents", holdInfo)
             queueMessage(myMessage)

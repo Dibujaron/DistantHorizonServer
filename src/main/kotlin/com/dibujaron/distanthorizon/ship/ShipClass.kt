@@ -30,7 +30,8 @@ class ShipClass(
     val holdSize: Int = properties.getProperty("holdSize").toInt()
     val price: Int = properties.getProperty("price").toInt()
     val fuelTankSize: Int = properties.getProperty("fuelTankSize").toInt()
-    val fuelBurnRate: Double = properties.getProperty("fuelBurnRate").toDouble()
+    val fuelBurnRatePerSecond: Double = properties.getProperty("fuelBurnRate").toDouble()
+    val fuelBurnRatePerTick = fuelBurnRatePerSecond / 20
     val dockingPorts = generateSequence(0) { it + 1 }
         .take(dockingPortCount)
         .map {

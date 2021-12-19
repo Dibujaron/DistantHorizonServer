@@ -110,12 +110,14 @@ class ExPersistenceDatabase : PersistenceDatabase {
     override fun createNewActorForAccount(accountInfo: AccountInfo, actorDisplayName: String): AccountInfo {
         if (accountInfo is AccountInfoInternal) {
             val acctId = accountInfo.id
-            val colors = ShipClassManager.getShipClass(DHServer.playerStartingShip)!!.getGoodColorScheme()
+            val startingShipClass = ShipClassManager.getShipClass(DHServer.playerStartingShip)!!
+            val colors = startingShipClass.getGoodColorScheme()
             val shipId = transaction {
                 ExDatabase.Ship.insertAndGetId {
                     it[shipClass] = DHServer.playerStartingShip
                     it[primaryColor] = colors.primaryColor.toInt()//ShipColor(Color(0,148,255)),
                     it[secondaryColor] = colors.secondaryColor.toInt()
+                    it[fuelLevel] = startingShipClass.fuelTankSize.toDouble()
                 }
             }
             transaction {
@@ -204,17 +206,13 @@ class ExPersistenceDatabase : PersistenceDatabase {
         throw java.lang.IllegalStateException("Object must be from same db")
     }
 
-    override fun updateActorDockedStationAndShipFuel(actor: ActorInfo, station: Station, newFuelLevel: Double): ActorInfo? {
+    override fun updateActorDockedStation(actor: ActorInfo, station: Station): ActorInfo? {
         if (actor is ActorInfoInternal) {
             val actorIdFilter = (ExDatabase.Actor.id eq actor.id)
             val ship = actor.ship as ShipInfoInternal
-            val shipIdFilter = (ExDatabase.Ship.id eq ship.id)
             transaction {
                 ExDatabase.Actor.update({ actorIdFilter }) {
                     it[lastDockedStation] = station.name
-                }
-                ExDatabase.Ship.update({shipIdFilter}){
-                    it[fuelLevel] = newFuelLevel
                 }
             }
             return transaction {
@@ -228,6 +226,17 @@ class ExPersistenceDatabase : PersistenceDatabase {
             }
         }
         throw java.lang.IllegalStateException("Object must be from same db")
+    }
+
+    override fun updateShipFuelLevel(ship: ShipInfo, newFuelLevel: Double) {
+        if(ship is ShipInfoInternal) {
+            val shipIdFilter = (ExDatabase.Ship.id eq ship.id)
+            transaction {
+                ExDatabase.Ship.update({ shipIdFilter }) {
+                    it[fuelLevel] = newFuelLevel
+                }
+            }
+        }
     }
 
     @Suppress("UNCHECKED_CAST")

@@ -66,6 +66,15 @@ open class Ship(
         }
     }
 
+    fun updateFuelLevel(delta: Double) {
+        val newLevel = fuelLevel + delta
+        println("Bought $delta fuel, level was $fuelLevel, new level is $newLevel")
+        fuelLevel = newLevel
+        if(dbHook != null) {
+            DHServer.getDatabase().getPersistenceDatabase().updateShipFuelLevel(dbHook, fuelLevel)
+        }
+    }
+
     fun isDocked(): Boolean {
         return dockedToPort != null && myDockedPort != null
     }
@@ -83,8 +92,8 @@ open class Ship(
     fun tick() {
         val dockedTo = dockedToPort
         val dockedFrom = myDockedPort
-        if(controls.mainEnginesActive){
-            fuelLevel = if(fuelLevel < type.fuelBurnRate) 0.0 else fuelLevel - type.fuelBurnRate
+        if (controls.mainEnginesActive) {
+            fuelLevel = if (fuelLevel < type.fuelBurnRatePerTick) 0.0 else fuelLevel - type.fuelBurnRatePerTick
         }
         currentState = if (dockedTo != null && dockedFrom != null) {
             val velocity = dockedTo.getVelocity()
@@ -105,7 +114,7 @@ open class Ship(
         var globalPos = currentState.position
         var rotation = currentState.rotation
         //velocity
-        if(fuelLevel > 0) {
+        if (fuelLevel > 0) {
             if (controls.mainEnginesActive) {
                 velocity += Vector2(0, -type.mainThrust).rotated(rotation) * delta
             }
@@ -210,14 +219,17 @@ open class Ship(
         this.myDockedPort = shipPort
         this.dockedToPort = stationPort
         DHServer.broadcastShipDocked(this)
+        val database = DHServer.getDatabase().getPersistenceDatabase();
         scriptWriter?.completeScript(stationPort.station)
         pilot?.actorInfo?.let {
             if (updateLastDocked) {
-                DHServer.getDatabase()
-                    .getPersistenceDatabase()
-                    .updateActorDockedStationAndShipFuel(it, stationPort.station, fuelLevel)
+                database.updateActorDockedStation(it, stationPort.station)
                 println("Updated last docked station of ${pilot.actorInfo?.displayName} to ${stationPort.station.name}")
             }
+        }
+        if(dbHook != null && updateLastDocked)
+        {
+            database.updateShipFuelLevel(dbHook, fuelLevel)
         }
     }
 
@@ -281,6 +293,13 @@ open class Ship(
         if (isDocked()) {
             val station = dockedToPort!!.station
             station.buyResourceFromShip(commodity, purchasingWallet, this, quantity)
+        }
+    }
+
+    fun purchaseFuelFromStation(purchasingWallet: Wallet, quantity: Int) {
+        if (isDocked()) {
+            val station = dockedToPort!!.station
+            station.sellFuelToShip(purchasingWallet, this, quantity)
         }
     }
 

@@ -255,6 +255,7 @@ object DHServer {
     }
 
     private fun onClientConnect(conn: WsConnectContext) {
+        println("Client connected.")
         val player = Player(conn)
         PlayerManager.addPlayer(player)
     }

@@ -12,6 +12,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 class Station(parentName: String?, stationName: String, properties: Properties) :
@@ -22,6 +25,7 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
     val splashTextList = ArrayList<String>()
     val dealerships = HashMap<Manufacturer, Int>()
     val navigable = properties.getProperty("navigable", "true").toBoolean()
+    val fuelPrice = properties.getProperty("fuel.price").toDouble()
     private var aiScripts: MutableMap<Int, MutableSet<ScriptReader>> = TreeMap()
 
     private val commodityStores: Map<CommodityType, CommodityStore> = CommodityType
@@ -119,6 +123,7 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
         retval.put("identifying_name", name)
         retval.put("display_name", displayName)
         retval.put("description", splashTextList.random(rand))
+        retval.put("fuel_price", fuelPrice)
         val commodities = JSONArray()
         commodityStores.values.asSequence()
             .map { it.createStoreJson() }
@@ -140,7 +145,6 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
 
     fun sellResourceToShip(resource: CommodityType, buyingWallet: Wallet, ship: Ship, quantity: Int) {
         val store = commodityStores.getValue(resource)
-        val price = store.price * quantity
         var purchaseQuantity = quantity
 
         //first check if there's enough on the station
@@ -154,7 +158,7 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
         if (purchaseQuantity > spaceInHold) {
             purchaseQuantity = spaceInHold
         }
-
+        var price = store.price * purchaseQuantity
         if (buyingWallet.getBalance() < price) {
             val affordableQuantity = buyingWallet.getBalance() / store.price
             purchaseQuantity = affordableQuantity
@@ -165,6 +169,22 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
         ship.updateHoldQuantity(resource, purchaseQuantity)
         //val holdStore = ship.hold.getOrPut(store.identifyingName, { 0 })
         //ship.hold[store.identifyingName] = holdStore + purchaseQuantity
+    }
+
+    fun sellFuelToShip(buyingWallet: Wallet, ship: Ship, quantity: Int) {
+        val spaceInTank = ship.type.fuelTankSize - ship.fuelLevel
+        var purchaseQuantity = quantity.toDouble()
+        if(purchaseQuantity > spaceInTank){
+            purchaseQuantity = spaceInTank
+        }
+        val price = ceil((fuelPrice * purchaseQuantity)).toInt()
+        if(buyingWallet.getBalance() < price){
+            val affordableQuantity = floor((buyingWallet.getBalance() / fuelPrice))
+            purchaseQuantity = affordableQuantity
+        }
+        val purchasePrice = ceil((fuelPrice * purchaseQuantity)).toInt()
+        buyingWallet.setBalance(buyingWallet.getBalance() - purchasePrice)
+        ship.updateFuelLevel(purchaseQuantity)
     }
 
     fun buyResourceFromShip(resource: CommodityType, buyingWallet: Wallet, ship: Ship, quantity: Int) {
