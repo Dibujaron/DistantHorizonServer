@@ -21,7 +21,6 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
     Orbiter(parentName, stationName, properties) {
 
     val dockingPorts = LinkedList<StationDockingPort>()
-    val displayName = properties.getProperty("displayName").trim()
     val splashTextList = ArrayList<String>()
     val dealerships = HashMap<Manufacturer, Int>()
     val navigable = properties.getProperty("navigable", "true").toBoolean()

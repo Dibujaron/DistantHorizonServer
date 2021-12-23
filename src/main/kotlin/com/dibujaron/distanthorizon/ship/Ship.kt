@@ -150,6 +150,8 @@ open class Ship(
         val retval = createShipHeartbeatJSON()
         retval.put("type", type.qualifiedName)
         retval.put("ship_name", name)
+        retval.put("ship_model", type.displayName)
+        retval.put("ship_make", type.manufacturer.displayNameShort)
         retval.put("hold_size", type.holdSize)
         retval.put("main_engine_thrust", type.mainThrust)
         retval.put("manu_engine_thrust", type.manuThrust)

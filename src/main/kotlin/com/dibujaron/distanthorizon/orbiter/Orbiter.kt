@@ -8,6 +8,7 @@ import java.util.*
 import kotlin.math.*
 
 abstract class Orbiter(private val parentName: String?, val name: String, val properties: Properties) {
+    val displayName = properties.getProperty("displayName").toString()
     var startingPos: Vector2 = Vector2(0, 0)
     var initialized = false;
     var parent: Planet? = null;

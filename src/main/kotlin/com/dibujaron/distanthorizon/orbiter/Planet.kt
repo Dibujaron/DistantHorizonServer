@@ -31,6 +31,7 @@ class Planet(parentName: String?, planetName: String, properties: Properties): O
         retval.put("type", type)
         retval.put("mass", mass)
         retval.put("min_orbital_altitude", minOrbitalRadius)
+        retval.put("display_name", displayName)
         return retval
     }
 
