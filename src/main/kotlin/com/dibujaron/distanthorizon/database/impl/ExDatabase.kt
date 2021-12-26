@@ -33,9 +33,8 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DhDatabase {
     }
 
     object Route : IntIdTable("route") {
-        val originStation: Column<String> =
-            varchar("origin_station", 32) //todo make these foreign keys to a stations table?
-        val destinationStation: Column<String> = varchar("dest_station", 32)
+        val originStation = reference("origin_station_id", Station.id)
+        val destinationStation = reference("dest_station_id", Station.id)
         val departureTick: Column<Int> = integer("departure_tick")
         val duration: Column<Int> = integer("duration")
         val startingLocationX: Column<Double> = double("start_loc_x")
@@ -67,7 +66,7 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DhDatabase {
         val ownedByAccount = reference("account_id", Account.id)
         val displayName: Column<String> = varchar("display_name", 32)
         val balance: Column<Int> = integer("balance")
-        val lastDockedStation: Column<String?> = varchar("last_docked_station", 32).nullable()
+        var lastDockedStation = reference("last_docked_station_id", Station.id).nullable()
         val currentShip = reference("current_ship_id", Ship.id)
     }
 
@@ -90,5 +89,9 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DhDatabase {
         val holdQtyMunitions: Column<Int> = integer(CommodityType.MUNITIONS.identifyingName).default(0)
         val holdQtyWater: Column<Int> = integer(CommodityType.WATER.identifyingName).default(0)
         val holdQtyRush: Column<Int> = integer(CommodityType.RUSH.identifyingName).default(0)
+    }
+
+    object Station: IntIdTable("station") {
+        var identifyingName: Column<String> =  varchar("identifying_name", 32);
     }
 }

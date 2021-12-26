@@ -1,6 +1,7 @@
 package com.dibujaron.distanthorizon.orbiter
 
 import com.dibujaron.distanthorizon.Vector2
+import com.dibujaron.distanthorizon.database.persistence.StationKey
 import java.io.File
 import java.io.FileReader
 import java.util.*
@@ -13,6 +14,8 @@ object OrbiterManager {
     private val orbitersMap: HashMap<String, Orbiter> = HashMap()
     private val planetsMap: HashMap<String, Planet> = HashMap()
     private val stationsMap: HashMap<String, Station> = HashMap()
+    private val stationKeyMap: HashMap<StationKey, Station> = HashMap();
+
     private const val GRAVITY_FUDGE = 50.0
     val GRAVITY_CONSTANT = 6.67408 * 10.0.pow(-11.0) * GRAVITY_FUDGE
 
@@ -36,14 +39,29 @@ object OrbiterManager {
         return orbitersMap.values
     }
 
-    fun getStation(name: String): Station? {
+    fun getStationByName(name: String): Station? {
         return stationsMap[name];
     }
 
-    fun getStationRequired(name: String): Station {
-        val s = getStation(name);
+    fun getStationByNameRequired(name: String): Station {
+        val s = getStationByName(name);
         if (s == null) {
             throw IllegalStateException("No station found with name $name")
+        } else {
+            return s
+        }
+    }
+
+    fun getStationByKey(key: StationKey): Station?
+    {
+        return stationKeyMap[key];
+    }
+
+    fun getStationByKeyRequired(key: StationKey): Station
+    {
+        val s = getStationByKey(key);
+        if (s == null) {
+            throw IllegalStateException("No station found with key $key")
         } else {
             return s
         }
@@ -89,6 +107,7 @@ object OrbiterManager {
                 if (orbiterName.startsWith("Stn_")) {
                     val stn = Station(parentName, orbiterName, props)
                     stationsMap[orbiterName] = stn
+                    stationKeyMap[stn.key] = stn
                     orbitersMap[orbiterName] = stn
                     println("Loaded station $orbiterName with parent $parentName.")
                 } else {

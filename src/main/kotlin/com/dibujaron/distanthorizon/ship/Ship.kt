@@ -225,10 +225,10 @@ open class Ship(
         this.dockedToPort = stationPort
         DHServer.broadcastShipDocked(this)
         val database = DHServer.getDatabase().getPersistenceDatabase();
-        scriptWriter?.completeScript(stationPort.station)
+        scriptWriter?.completeScript(stationPort.station.key)
         pilot?.actorInfo?.let {
             if (updateLastDocked) {
-                database.updateActorDockedStation(it, stationPort.station)
+                database.updateActorDockedStation(it, stationPort.station.key)
                 println("Updated last docked station of ${pilot.actorInfo?.displayName} to ${stationPort.station.name}")
             }
         }
@@ -260,7 +260,7 @@ open class Ship(
             if (pilot != null) {
                 scriptWriter = DHServer.getDatabase()
                     .getScriptDatabase()
-                    .beginLoggingScript(pilot.actorInfo, dockedTo.station, currentState, type)
+                    .beginLoggingScript(pilot.actorInfo, dockedTo.station.key, currentState, type)
             }
         }
         dockedToPort = null

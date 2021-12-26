@@ -1,5 +1,6 @@
 package com.dibujaron.distanthorizon.database.script
 
+import com.dibujaron.distanthorizon.database.persistence.StationKey
 import com.dibujaron.distanthorizon.orbiter.Station
 import com.dibujaron.distanthorizon.ship.ShipClass
 import com.dibujaron.distanthorizon.ship.ShipInputs
@@ -12,9 +13,9 @@ interface ScriptReader {
 
     fun getDepartureTick(): Int
 
-    fun getSourceStation(): Station
+    fun getSourceStation(): StationKey
 
-    fun getDestinationStation(): Station
+    fun getDestinationStation(): StationKey
 
     fun getStartingState(): ShipState
 

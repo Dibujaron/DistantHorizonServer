@@ -10,6 +10,7 @@ import com.dibujaron.distanthorizon.event.EventManager
 import com.dibujaron.distanthorizon.event.PlayerChatEvent
 import com.dibujaron.distanthorizon.login.PendingLoginManager
 import com.dibujaron.distanthorizon.orbiter.CommodityType
+import com.dibujaron.distanthorizon.orbiter.OrbiterManager
 import com.dibujaron.distanthorizon.player.wallet.AccountWallet
 import com.dibujaron.distanthorizon.player.wallet.GuestWallet
 import com.dibujaron.distanthorizon.player.wallet.Wallet
@@ -101,7 +102,8 @@ class Player(val connection: WsContext) : CommandSender {
         val myActor = actorInfo
         initialized = true
         if (myActor?.lastDockedStation != null) {
-            ship.dock(ship.myDockingPorts.random(), myActor.lastDockedStation.dockingPorts.random(), false)
+            val lastStation = OrbiterManager.getStationByKeyRequired(myActor.lastDockedStation);
+            ship.dock(ship.myDockingPorts.random(), lastStation.dockingPorts.random(), false)
             queueSendStationMenuMessage()
         }
     }

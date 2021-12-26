@@ -2,6 +2,8 @@ package com.dibujaron.distanthorizon.orbiter
 
 import com.dibujaron.distanthorizon.DHServer
 import com.dibujaron.distanthorizon.Vector2
+import com.dibujaron.distanthorizon.database.DhDatabase
+import com.dibujaron.distanthorizon.database.impl.ExDatabase
 import com.dibujaron.distanthorizon.database.script.ScriptReader
 import com.dibujaron.distanthorizon.docking.StationDockingPort
 import com.dibujaron.distanthorizon.player.Player
@@ -20,6 +22,7 @@ import kotlin.random.Random
 class Station(parentName: String?, stationName: String, properties: Properties) :
     Orbiter(parentName, stationName, properties) {
 
+    val key = DHServer.getDatabase().getPersistenceDatabase().selectOrCreateStation(stationName, properties)
     val dockingPorts = LinkedList<StationDockingPort>()
     val splashTextList = ArrayList<String>()
     val dealerships = HashMap<Manufacturer, Int>()
@@ -56,36 +59,13 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
     }
 
     fun initAiScripts() {
-        DHServer.getDatabase().getScriptDatabase()
-            .selectScriptsForStation(this).asSequence()
-            .filter { it.getSourceStation().navigable && it.getDestinationStation().navigable }
-            .forEach { aiScripts.getOrPut(it.getDepartureTick()) { mutableSetOf() }.add(it) }
+        if(this.navigable) {
+            DHServer.getDatabase().getScriptDatabase()
+                .selectScriptsForStation(this.key).asSequence()
+                .filter { OrbiterManager.getStationByKeyRequired(it.getDestinationStation()).navigable }
+                .forEach { aiScripts.getOrPut(it.getDepartureTick()) { mutableSetOf() }.add(it) }
+        }
     }
-
-    /*fun calculateBestAiScripts() {
-        for(i in 0..DHServer.CYCLE_LENGTH_TICKS)
-        {
-            for(destStation in OrbiterManager.getStations()){
-                if(destStation == this) continue
-
-            }
-        }
-        for (tickWithScripts in aiScripts.keys) {
-
-        }
-        val aiZS = DHServer.getDatabase().getScriptDatabase().selectScriptsForStation(this)
-        for (myScript in scripts) { //ordered from the db
-            val nextPossibleArrival = myScript.getEarliestPossibleArrivalUsingThisRoute()
-            val departure
-            for (otherScript in scripts) {
-                if (otherScript.)
-            }
-        }
-        DHServer.getDatabase().getScriptDatabase()
-            .selectScriptsForStation(this).map {
-                val arrivalStation = it.getDestinationStation()
-            }
-    }*/
 
     override fun tick() {
         commodityStores.values.forEach { it.tick() }

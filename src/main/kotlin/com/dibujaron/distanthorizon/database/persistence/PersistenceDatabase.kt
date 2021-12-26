@@ -4,7 +4,7 @@ import com.dibujaron.distanthorizon.orbiter.CommodityType
 import com.dibujaron.distanthorizon.orbiter.Station
 import com.dibujaron.distanthorizon.ship.ColorScheme
 import com.dibujaron.distanthorizon.ship.ShipClass
-import com.dibujaron.distanthorizon.ship.ShipColor
+import java.util.*
 
 interface PersistenceDatabase {
     fun selectOrCreateAccount(accountName: String): AccountInfo
@@ -15,12 +15,13 @@ interface PersistenceDatabase {
         sc: ShipClass,
         name: String,
         colorScheme: ColorScheme,
-        fuelLevel: Double
+        newFuelLevel: Double
     ): ActorInfo?
 
     fun updateActorBalance(actor: ActorInfo, newBal: Int): ActorInfo?
-    fun updateActorDockedStation(actor: ActorInfo, station: Station): ActorInfo?
+    fun updateActorDockedStation(actor: ActorInfo, station: StationKey): ActorInfo?
     fun updateShipHold(ship: ShipInfo, commodity: CommodityType, amount: Int)
     fun updateShipFuelLevel(ship: ShipInfo, newFuelLevel: Double)
     fun getWealthiestActors(limit: Int): List<ActorInfo>
+    fun selectOrCreateStation(stationName: String, properties: Properties): StationKey
 }

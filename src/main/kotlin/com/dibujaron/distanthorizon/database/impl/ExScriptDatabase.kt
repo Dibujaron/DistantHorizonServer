@@ -1,7 +1,9 @@
 package com.dibujaron.distanthorizon.database.impl
 
+import StationKeyInternal
 import com.dibujaron.distanthorizon.Vector2
 import com.dibujaron.distanthorizon.database.persistence.ActorInfo
+import com.dibujaron.distanthorizon.database.persistence.StationKey
 import com.dibujaron.distanthorizon.database.script.ScriptDatabase
 import com.dibujaron.distanthorizon.database.script.ScriptReader
 import com.dibujaron.distanthorizon.database.script.ScriptWriter
@@ -20,20 +22,28 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
 
 class ExScriptDatabase : ScriptDatabase {
-    override fun selectStationsWithScripts(): List<Station> {
+
+    /*
+               ExDatabase.Actor.join(
+                ExDatabase.Ship,
+                JoinType.INNER,
+                additionalConstraint = { ExDatabase.Actor.currentShip eq ExDatabase.Ship.id })
+     */
+    override fun selectStationsWithScripts(): List<StationKey> {
         return transaction {
-            ExDatabase.Route.slice(ExDatabase.Route.originStation).selectAll()
+            ExDatabase.Route
+                .slice(ExDatabase.Route.originStation)
+                .selectAll()
                 .withDistinct()
-                .map { it[ExDatabase.Route.originStation] }
-                .mapNotNull { OrbiterManager.getStation(it) }
-                .toList()
+                .map{StationKeyInternal(it[ExDatabase.Route.originStation])}
         }
     }
 
-    override fun selectScriptsForStation(sourceStation: Station): List<ScriptReader> {
-        val originStationFilter = (ExDatabase.Route.originStation eq sourceStation.name)
+    override fun selectScriptsForStation(sourceStation: StationKey): List<ScriptReader> {
+        val originStationFilter = (ExDatabase.Route.originStation eq (sourceStation as StationKeyInternal).id)
         return transaction {
-            ExDatabase.Route.select { originStationFilter }
+            ExDatabase.Route
+                .select { originStationFilter }
                 .orderBy(ExDatabase.Route.departureTick)
                 .map { RelationalScriptReader(it) }
         }
@@ -41,14 +51,14 @@ class ExScriptDatabase : ScriptDatabase {
 
     //for now, the best script is the one with the earliest arrival date.
     override fun selectAvailableScript(
-        sourceStation: Station,
-        targetStation: Station,
+        sourceStation: StationKey,
+        targetStation: StationKey,
         earliestDepartureTick: Int,
         latestDepartureTick: Int
     ): ScriptReader? {
 
-        val originStationFilter = (ExDatabase.Route.originStation eq sourceStation.name)
-        val destStationFilter = (ExDatabase.Route.destinationStation eq targetStation.name)
+        val originStationFilter = (ExDatabase.Route.originStation eq (sourceStation as StationKeyInternal).id)
+        val destStationFilter = (ExDatabase.Route.destinationStation eq (targetStation as StationKeyInternal).id)
         val stationFilters = originStationFilter and destStationFilter
         val departureTickLowerLimit = (ExDatabase.Route.departureTick greater earliestDepartureTick)
         val departureTickUpperLimit = (ExDatabase.Route.departureTick less latestDepartureTick)
@@ -56,7 +66,9 @@ class ExScriptDatabase : ScriptDatabase {
         val routeFilters = stationFilters and timeFilters
 
         val routes = transaction {
-            ExDatabase.Route.select { routeFilters }.orderBy(ExDatabase.Route.duration to SortOrder.ASC).toList()
+            ExDatabase.Route
+                .select { routeFilters }
+                .orderBy(ExDatabase.Route.duration to SortOrder.ASC).toList()
         }
 
         val selectedRoute = routes.minByOrNull { it[ExDatabase.Route.departureTick] + it[ExDatabase.Route.duration] } //min by arrival time
@@ -68,18 +80,19 @@ class ExScriptDatabase : ScriptDatabase {
     }
 
     override fun selectAvailableScriptToAnywhere(
-        sourceStation: Station,
+        sourceStation: StationKey,
         earliestDepartureTick: Int,
         latestDepartureTick: Int
     ): ScriptReader? {
-        val originStationFilter = (ExDatabase.Route.originStation eq sourceStation.name)
+        val originStationFilter = (ExDatabase.Route.originStation eq (sourceStation as StationKeyInternal).id)
         val departureTickLowerLimit = (ExDatabase.Route.departureTick greater earliestDepartureTick)
         val departureTickUpperLimit = (ExDatabase.Route.departureTick less latestDepartureTick)
         val timeFilters = departureTickLowerLimit and departureTickUpperLimit
         val routeFilters = originStationFilter and timeFilters
 
         val route = transaction {
-            ExDatabase.Route.select { routeFilters }
+            ExDatabase.Route
+                .select { routeFilters }
                 .orderBy(ExDatabase.Route.departureTick to SortOrder.ASC) //leave asap don't care where
                 .limit(1)
                 .first()
@@ -116,12 +129,12 @@ class ExScriptDatabase : ScriptDatabase {
             return route[ExDatabase.Route.departureTick]
         }
 
-        override fun getDestinationStation(): Station {
-            return OrbiterManager.getStationRequired(route[ExDatabase.Route.destinationStation])
+        override fun getDestinationStation(): StationKey {
+            return StationKeyInternal(route[ExDatabase.Route.destinationStation])
         }
 
-        override fun getSourceStation(): Station {
-            return OrbiterManager.getStationRequired(route[ExDatabase.Route.originStation])
+        override fun getSourceStation(): StationKey {
+            return StationKeyInternal(route[ExDatabase.Route.originStation])
         }
 
         override fun getStartingState(): ShipState {
@@ -172,7 +185,7 @@ class ExScriptDatabase : ScriptDatabase {
 
     override fun beginLoggingScript(
         actorInfo: ActorInfo?,
-        sourceStation: Station,
+        sourceStation: StationKey,
         startState: ShipState,
         shipClass: ShipClass
     ): ScriptWriter {
@@ -182,7 +195,7 @@ class ExScriptDatabase : ScriptDatabase {
 
     inner class RelationalScriptWriter(
         private val actor: ActorInfo?,
-        private val sourceStation: Station,
+        private val sourceStation: StationKey,
         private val startState: ShipState,
         private val shipType: ShipClass,
         private val startTick: Int = TimeUtils.getCurrentTickInCycle(),
@@ -195,7 +208,7 @@ class ExScriptDatabase : ScriptDatabase {
         }
 
         //todo make not blocking if required
-        override fun completeScript(dockedStation: Station) {
+        override fun completeScript(dockedStation: StationKey) {
             println("Saving script...")
             val pilotId = if (actor == null) {
                 null
@@ -204,8 +217,8 @@ class ExScriptDatabase : ScriptDatabase {
             }
             transaction {
                 val newRouteId = ExDatabase.Route.insertAndGetId {
-                    it[originStation] = sourceStation.name
-                    it[destinationStation] = dockedStation.name
+                    it[originStation] = (sourceStation as StationKeyInternal).id
+                    it[destinationStation] = (dockedStation as StationKeyInternal).id
                     it[departureTick] = startTick
                     it[duration] = TimeUtils.getCurrentTickAbsolute() - startTickAbsolute
                     it[startingLocationX] = startState.position.x

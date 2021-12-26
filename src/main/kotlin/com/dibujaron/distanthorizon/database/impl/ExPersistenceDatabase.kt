@@ -1,10 +1,8 @@
 package com.dibujaron.distanthorizon.database.impl
 
+import StationKeyInternal
 import com.dibujaron.distanthorizon.DHServer
-import com.dibujaron.distanthorizon.database.persistence.AccountInfo
-import com.dibujaron.distanthorizon.database.persistence.ActorInfo
-import com.dibujaron.distanthorizon.database.persistence.PersistenceDatabase
-import com.dibujaron.distanthorizon.database.persistence.ShipInfo
+import com.dibujaron.distanthorizon.database.persistence.*
 import com.dibujaron.distanthorizon.orbiter.CommodityType
 import com.dibujaron.distanthorizon.orbiter.OrbiterManager
 import com.dibujaron.distanthorizon.orbiter.Station
@@ -16,8 +14,56 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.*
+import kotlin.collections.HashMap
 
 class ExPersistenceDatabase : PersistenceDatabase {
+
+    inner class AccountInfoInternal(
+        val id: EntityID<Int>,
+        accountName: String,
+        actors: List<ActorInfoInternal>
+    ) : AccountInfo(accountName, actors)
+
+    inner class ActorInfoInternal(
+        val id: EntityID<Int>,
+        displayName: String,
+        balance: Int,
+        lastDockedStation: StationKey?,
+        ship: ShipInfoInternal
+    ) : ActorInfo(id.value, displayName, balance, lastDockedStation, ship)
+
+    inner class ShipInfoInternal(
+        val id: EntityID<Int>,
+        shipClass: ShipClass,
+        shipName: String,
+        primaryColor: ShipColor,
+        secondaryColor: ShipColor,
+        holdMap: Map<CommodityType, Int>,
+        fuelLevel: Double
+    ) : ShipInfo(shipClass, shipName, primaryColor, secondaryColor, holdMap, fuelLevel)
+
+    override fun selectOrCreateStation(stationName: String, properties: Properties): StationKey {
+        val nameFilter = (ExDatabase.Station.identifyingName eq stationName)
+        val stationRow = transaction {
+            val firstResult: ResultRow? = ExDatabase.Station
+                .select { nameFilter }
+                .firstOrNull()
+
+            if (firstResult == null) {
+                val id = ExDatabase.Station.insertAndGetId {
+                    it[ExDatabase.Station.identifyingName] = stationName
+                }
+                val idFilter = ExDatabase.Station.id eq id
+                ExDatabase.Station.select { idFilter }.first()
+            } else {
+                firstResult
+            }
+        }
+
+        return StationKeyInternal(stationRow[ExDatabase.Station.id])
+    }
+
     override fun selectOrCreateAccount(accountName: String): AccountInfo {
         val nameFilter = (ExDatabase.Account.accountName eq accountName)
         val accountRow = transaction {
@@ -56,36 +102,12 @@ class ExPersistenceDatabase : PersistenceDatabase {
         )
     }
 
-    inner class AccountInfoInternal(
-        val id: EntityID<Int>,
-        accountName: String,
-        actors: List<ActorInfoInternal>
-    ) : AccountInfo(accountName, actors)
-
-    inner class ActorInfoInternal(
-        val id: EntityID<Int>,
-        displayName: String,
-        balance: Int,
-        lastDockedStation: Station?,
-        ship: ShipInfoInternal
-    ) : ActorInfo(id.value, displayName, balance, lastDockedStation, ship)
-
-    inner class ShipInfoInternal(
-        val id: EntityID<Int>,
-        shipClass: ShipClass,
-        shipName: String,
-        primaryColor: ShipColor,
-        secondaryColor: ShipColor,
-        holdMap: Map<CommodityType, Int>,
-        fuelLevel: Double
-    ) : ShipInfo(shipClass, shipName, primaryColor, secondaryColor, holdMap, fuelLevel)
-
     private fun mapActorInfo(row: ResultRow): ActorInfoInternal {
         return ActorInfoInternal(
             row[ExDatabase.Actor.id],
             row[ExDatabase.Actor.displayName],
             row[ExDatabase.Actor.balance],
-            row[ExDatabase.Actor.lastDockedStation]?.let { OrbiterManager.getStationRequired(it) },
+            row[ExDatabase.Actor.lastDockedStation]?.let { StationKeyInternal(it) },
             mapShipInfo(row)
         )
     }
@@ -162,7 +184,7 @@ class ExPersistenceDatabase : PersistenceDatabase {
         name: String,
         colorScheme: ColorScheme,
         newFuelLevel: Double
-    ): ActorInfo? {
+    ): ActorInfo {
         if (actor is ActorInfoInternal) {
             val oldShip = actor.ship
             if (oldShip is ShipInfoInternal) {
@@ -211,13 +233,12 @@ class ExPersistenceDatabase : PersistenceDatabase {
         throw java.lang.IllegalStateException("Object must be from same db")
     }
 
-    override fun updateActorDockedStation(actor: ActorInfo, station: Station): ActorInfo? {
+    override fun updateActorDockedStation(actor: ActorInfo, station: StationKey): ActorInfo? {
         if (actor is ActorInfoInternal) {
             val actorIdFilter = (ExDatabase.Actor.id eq actor.id)
-            val ship = actor.ship as ShipInfoInternal
             transaction {
                 ExDatabase.Actor.update({ actorIdFilter }) {
-                    it[lastDockedStation] = station.name
+                    it[lastDockedStation] = (station as StationKeyInternal).id
                 }
             }
             return transaction {
@@ -234,7 +255,7 @@ class ExPersistenceDatabase : PersistenceDatabase {
     }
 
     override fun updateShipFuelLevel(ship: ShipInfo, newFuelLevel: Double) {
-        if(ship is ShipInfoInternal) {
+        if (ship is ShipInfoInternal) {
             val shipIdFilter = (ExDatabase.Ship.id eq ship.id)
             transaction {
                 ExDatabase.Ship.update({ shipIdFilter }) {
