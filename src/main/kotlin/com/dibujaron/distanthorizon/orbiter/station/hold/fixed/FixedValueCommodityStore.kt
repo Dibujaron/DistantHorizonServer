@@ -1,11 +1,12 @@
 package com.dibujaron.distanthorizon.orbiter.station.hold.fixed
 
+import com.dibujaron.distanthorizon.DHServer
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityStore
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.utils.TimeUtils
 import java.util.*
 
-const val UPDATE_TIME_TICKS = 5 * 60
+const val UPDATE_TIME_TICKS = DHServer.TICKS_PER_SECOND * 5
 
 class FixedValueCommodityStore(type: CommodityType, properties: Properties) : CommodityStore(type) {
 
