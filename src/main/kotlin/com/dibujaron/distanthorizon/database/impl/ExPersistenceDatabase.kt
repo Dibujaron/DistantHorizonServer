@@ -2,6 +2,7 @@ package com.dibujaron.distanthorizon.database.impl
 
 import StationKeyInternal
 import com.dibujaron.distanthorizon.DHServer
+import com.dibujaron.distanthorizon.Vector2
 import com.dibujaron.distanthorizon.database.persistence.*
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.ship.ColorScheme
@@ -132,7 +133,6 @@ class ExPersistenceDatabase : PersistenceDatabase {
             storeInfo[ExDatabase.StationCommmodityStore.quantity]
         )
     }
-
 
     override fun selectOrCreateAccount(accountName: String): AccountInfo {
         val nameFilter = (ExDatabase.Account.accountName eq accountName)
@@ -267,6 +267,7 @@ class ExPersistenceDatabase : PersistenceDatabase {
                         it[secondaryColor] = colorScheme.secondaryColor.toInt()
                         it[fuelLevel] = newFuelLevel
                     }
+                    //todo this needs to update the hold, can exceed hold capacity
                 }
                 return transaction {
                     ExDatabase.Actor.join(
@@ -351,7 +352,6 @@ class ExPersistenceDatabase : PersistenceDatabase {
         }
     }
 
-
     override fun getWealthiestActors(limit: Int): List<ActorInfo> {
         return transaction {
             ExDatabase.Actor.join(
@@ -363,5 +363,43 @@ class ExPersistenceDatabase : PersistenceDatabase {
                 .limit(limit)
                 .map { mapActorInfo(it) }
         }
+    }
+
+    override fun getWaitingPassengersAtStation(station: StationKey): List<WaitingPassengerGroupInfo> {
+        val stationIDFilter = (ExDatabase.StationPassengerGroup.station eq (station as StationKeyInternal).id)
+        return transaction {
+            ExDatabase.StationPassengerGroup.select { stationIDFilter }
+                .map {
+                    val destStationkey = StationKeyInternal(it[ExDatabase.StationPassengerGroup.destinationStation])
+                    WaitingPassengerGroupInfo(station, destStationkey, it[ExDatabase.StationPassengerGroup.quantity])
+                }
+        }
+    }
+
+    override fun updateWaitingPassengersAtStationForDestination(
+        station: StationKey,
+        destStation: StationKey,
+        waiting: Int
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override fun addPassengersToShip(
+        ship: ShipInfo,
+        originStation: StationKey,
+        destStation: StationKey,
+        embarkLocation: Vector2,
+        embarkTime: Long,
+        quantity: Int
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPassengersOnShip(ship: ShipInfo): List<EmbarkedPassengerGroupInfo> {
+        TODO("Not yet implemented")
+    }
+
+    override fun clearPassengersToStation(ship: ShipInfo, arrivalStation: StationKey) {
+        TODO("Not yet implemented")
     }
 }

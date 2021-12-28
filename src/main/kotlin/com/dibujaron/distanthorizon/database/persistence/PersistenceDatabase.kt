@@ -1,5 +1,6 @@
 package com.dibujaron.distanthorizon.database.persistence
 
+import com.dibujaron.distanthorizon.Vector2
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.ship.ColorScheme
 import com.dibujaron.distanthorizon.ship.ShipClass
@@ -26,5 +27,27 @@ interface PersistenceDatabase {
     fun selectCommodityStoreStatus(): List<CommodityStoreInfo>
     fun updateCommodityStoreQuantity(commodity: CommodityType, station: StationKey, newQuantity: Int)
     fun updateCommodityStorePrice(commodity: CommodityType, station: StationKey, newPrice: Double)
-    fun selectOrCreateCommodityStore(commodity: CommodityType, station: StationKey, initialPrice: Double, initialQuantity: Int): CommodityStoreInfo
+    fun selectOrCreateCommodityStore(
+        commodity: CommodityType,
+        station: StationKey,
+        initialPrice: Double,
+        initialQuantity: Int
+    ): CommodityStoreInfo
+
+    fun getWaitingPassengersAtStation(station: StationKey): List<WaitingPassengerGroupInfo>
+    fun updateWaitingPassengersAtStationForDestination(station: StationKey, destStation: StationKey, waiting: Int)
+
+    fun addPassengersToShip(
+        ship: ShipInfo,
+        originStation: StationKey,
+        destStation: StationKey,
+        embarkLocation: Vector2,
+        embarkTime: Long,
+        quantity: Int
+    )
+
+    fun getPassengersOnShip(ship: ShipInfo): List<EmbarkedPassengerGroupInfo>
+
+    fun clearPassengersToStation(ship: ShipInfo, arrivalStation: StationKey)
+
 }

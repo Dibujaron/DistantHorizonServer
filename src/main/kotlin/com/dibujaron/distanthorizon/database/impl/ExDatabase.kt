@@ -16,11 +16,22 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DHDatabase {
 
     private val scriptDatabase = ExScriptDatabase()
     private val persistenceDatabase = ExPersistenceDatabase()
+
     init {
         val result = Database.connect(databaseUrl, driver = databaseDriver)
         println("Database connected. Dialect: ${result.dialect.name}, DB Version: ${result.version}, Database Name: ${result.name}. ")
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(Route, RouteStep, Account, Actor, Ship, Station, StationCommmodityStore)
+            SchemaUtils.createMissingTablesAndColumns(
+                Route,
+                RouteStep,
+                Account,
+                Actor,
+                Ship,
+                Station,
+                StationCommmodityStore,
+                StationPassengerGroup,
+                EmbarkedPassengerGroup
+            )
         }
     }
 
@@ -58,11 +69,11 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DHDatabase {
         val aftThrusters: Column<Boolean> = bool("aft_thrust")
     }
 
-    object Account: IntIdTable("account") {
+    object Account : IntIdTable("account") {
         val accountName: Column<String> = varchar("account_name", 32)
     }
 
-    object Actor: IntIdTable("actor") {
+    object Actor : IntIdTable("actor") {
         val ownedByAccount = reference("account_id", Account.id)
         val displayName: Column<String> = varchar("display_name", 32)
         val balance: Column<Int> = integer("balance")
@@ -70,7 +81,7 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DHDatabase {
         val currentShip = reference("current_ship_id", Ship.id)
     }
 
-    object Ship: IntIdTable("ship_instance") {
+    object Ship : IntIdTable("ship_instance") {
         val shipClass: Column<String> = varchar("ship_class", 32)
         val shipName: Column<String> = varchar("ship_name", 64)
         val primaryColor: Column<Int> = integer("primary_color")
@@ -91,14 +102,30 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DHDatabase {
         val holdQtyRush: Column<Int> = integer(CommodityType.RUSH.identifyingName).default(0)
     }
 
-    object Station: IntIdTable("station") {
-        var identifyingName: Column<String> =  varchar("identifying_name", 32);
+    object Station : IntIdTable("station") {
+        var identifyingName: Column<String> = varchar("identifying_name", 32);
     }
 
-    object StationCommmodityStore: IntIdTable("station_commodity_store") {
+    object StationCommmodityStore : IntIdTable("station_commodity_store") {
         val station = reference("station_id", Station.id)
         val commodity: Column<String> = varchar("commodity_name", 64)
         val quantity: Column<Int> = integer("quantity")
         val price: Column<Double> = double("price")
+    }
+
+    object StationPassengerGroup : IntIdTable("station_passenger_group") {
+        val station = reference("station_id", Station.id)
+        val destinationStation = reference("dest_station_id", Station.id)
+        val quantity: Column<Int> = integer("quantity")
+    }
+
+    object EmbarkedPassengerGroup : IntIdTable("embarked_passenger_group") {
+        val ship = reference("ship_id", Ship.id)
+        val originStation = reference("origin_station_id", Station.id)
+        val destinationStation = reference("dest_station_id", Station.id)
+        val quantity: Column<Int> = integer("quantity")
+        val loadedTime: Column<Long> = long("loaded_time")
+        val loadedLocationX: Column<Double> = double("loaded_location_x")
+        val loadedLocationY: Column<Double> = double("loaded_location_y")
     }
 }

@@ -1,10 +1,10 @@
 package com.dibujaron.distanthorizon.orbiter.station.hold.dynamic
 
 import com.dibujaron.distanthorizon.DHServer
+import com.dibujaron.distanthorizon.background.BackgroundTaskManager
 import com.dibujaron.distanthorizon.database.persistence.StationKey
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityStore
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
-import com.dibujaron.distanthorizon.orbiter.station.hold.fixed.UPDATE_TIME_TICKS
 import com.dibujaron.distanthorizon.utils.NoiseUtils
 import com.dibujaron.distanthorizon.utils.TimeUtils
 import java.util.*
@@ -49,7 +49,7 @@ class DynamicCommodityStore(type: CommodityType, val stationKey: StationKey, pro
     override fun updateQuantityAvailable(delta: Int) {
         val newQuantity = quantity + delta
         quantity = newQuantity
-        DynamicEconomyManager.executeAsync {
+        BackgroundTaskManager.executeInBackground {
             DHServer.getDatabase().getPersistenceDatabase().updateCommodityStoreQuantity(type, stationKey, newQuantity)
         }
     }
@@ -59,7 +59,7 @@ class DynamicCommodityStore(type: CommodityType, val stationKey: StationKey, pro
     }
 
     override fun tick() {
-        if (DynamicEconomyManager.isMaster()) {
+        if (DHServer.isMaster) {
             priceTick()
             quantityTick()
         }
@@ -76,7 +76,7 @@ class DynamicCommodityStore(type: CommodityType, val stationKey: StationKey, pro
                 newQty = 0
             }
             if (newQty != quantity) {
-                DynamicEconomyManager.executeAsync {
+                BackgroundTaskManager.executeInBackground {
                     DHServer.getDatabase().getPersistenceDatabase()
                         .updateCommodityStoreQuantity(type, stationKey, newQty)
                 }
@@ -95,7 +95,7 @@ class DynamicCommodityStore(type: CommodityType, val stationKey: StationKey, pro
             val noiseScaled = noise * elasticity
             val newPrice = initialPrice + noiseScaled
             price = newPrice
-            DynamicEconomyManager.executeAsync {
+            BackgroundTaskManager.executeInBackground {
                 DHServer.getDatabase().getPersistenceDatabase().updateCommodityStorePrice(type, stationKey, newPrice)
             }
             lastUpdateTickPrice = currentTick

@@ -10,15 +10,12 @@ import kotlin.concurrent.thread
 const val UPDATE_INTERVAL_MS = 5000L
 object DynamicEconomyManager {
 
-    private var IS_MASTER = true
     private var USE_DYNAMIC_ECONOMY = false
 
     private val storeMap = HashMap<StoreKey, DynamicCommodityStore>()
-    private val asyncExecutor = Executors.newFixedThreadPool(1)
     fun moduleInit(serverProperties: Properties) {
         USE_DYNAMIC_ECONOMY = serverProperties.getProperty("economy.dynamic", "true").toBoolean()
         if (USE_DYNAMIC_ECONOMY) {
-            IS_MASTER = serverProperties.getProperty("master", "true").toBoolean()
             thread{ runThread()}
         }
     }
@@ -26,15 +23,6 @@ object DynamicEconomyManager {
     fun isEnabled(): Boolean
     {
         return USE_DYNAMIC_ECONOMY
-    }
-
-    fun isMaster(): Boolean
-    {
-        return IS_MASTER
-    }
-
-    fun executeAsync(command: () -> Unit){
-        asyncExecutor.execute(command)
     }
 
     private fun runThread() {

@@ -1,5 +1,6 @@
 package com.dibujaron.distanthorizon
 
+import com.dibujaron.distanthorizon.background.BackgroundTaskManager
 import com.dibujaron.distanthorizon.command.CommandManager
 import com.dibujaron.distanthorizon.command.CommandSender
 import com.dibujaron.distanthorizon.database.DHDatabase
@@ -67,11 +68,12 @@ object DHServer {
     val dockingSpeed = serverProperties.getProperty("docking.speed", "200.0").toDouble()
     val dockingDist = serverProperties.getProperty("docking.distance", "200.0").toDouble()
     var debug = serverProperties.getProperty("debug", "true").toBoolean()
+    val isMaster = serverProperties.getProperty("master", "true").toBoolean()
     val dbUrl = serverProperties.getProperty(
         "database.url",
-        "jdbc:postgresql://localhost/distant_horizon?user=postgres&password=admin"
+        "jdbc:mysql://root:admin@localhost:3306/distant_horizon"
     )
-    val dbDriver = serverProperties.getProperty("database.driver", "org.postgresql.Driver")
+    val dbDriver = serverProperties.getProperty("database.driver", "com.mysql.cj.jdbc.Driver")
     val shipNames = loadShipNames()
 
     init {
@@ -115,6 +117,7 @@ object DHServer {
             .forEach { it.sendServerMessageImmediate("This server has closed. Your progress was saved at your last docked station.") }
         timer.cancel()
         javalin.stop()
+        BackgroundTaskManager.shutdown()
     }
 
     fun restart(sender: CommandSender? = null) {
