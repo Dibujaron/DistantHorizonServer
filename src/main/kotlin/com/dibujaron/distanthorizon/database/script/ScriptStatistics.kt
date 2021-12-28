@@ -1,6 +1,6 @@
 package com.dibujaron.distanthorizon.database.script
 
-import com.dibujaron.distanthorizon.orbiter.Station
+import com.dibujaron.distanthorizon.orbiter.station.Station
 import com.dibujaron.distanthorizon.utils.TimeUtils
 
 interface ScriptStatistics {

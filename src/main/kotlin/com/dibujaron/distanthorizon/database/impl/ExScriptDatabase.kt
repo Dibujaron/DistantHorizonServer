@@ -7,8 +7,6 @@ import com.dibujaron.distanthorizon.database.persistence.StationKey
 import com.dibujaron.distanthorizon.database.script.ScriptDatabase
 import com.dibujaron.distanthorizon.database.script.ScriptReader
 import com.dibujaron.distanthorizon.database.script.ScriptWriter
-import com.dibujaron.distanthorizon.orbiter.OrbiterManager
-import com.dibujaron.distanthorizon.orbiter.Station
 import com.dibujaron.distanthorizon.ship.ShipClass
 import com.dibujaron.distanthorizon.ship.ShipClassManager
 import com.dibujaron.distanthorizon.ship.ShipInputs

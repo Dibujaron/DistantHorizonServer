@@ -1,7 +1,7 @@
 package com.dibujaron.distanthorizon.docking
 
 import com.dibujaron.distanthorizon.Vector2
-import com.dibujaron.distanthorizon.orbiter.Station
+import com.dibujaron.distanthorizon.orbiter.station.Station
 
 class StationDockingPort(val station: Station, val relativePos: Vector2, val rotationDegrees: Double) : DockingPort {
     val relativeRotation = Math.toRadians(rotationDegrees)

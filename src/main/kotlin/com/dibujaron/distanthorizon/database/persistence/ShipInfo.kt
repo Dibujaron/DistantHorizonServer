@@ -1,6 +1,6 @@
 package com.dibujaron.distanthorizon.database.persistence
 
-import com.dibujaron.distanthorizon.orbiter.CommodityType
+import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.ship.ShipClass
 import com.dibujaron.distanthorizon.ship.ShipColor
 import org.json.JSONObject

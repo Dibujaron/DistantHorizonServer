@@ -2,6 +2,7 @@ package com.dibujaron.distanthorizon.orbiter
 
 import com.dibujaron.distanthorizon.Vector2
 import com.dibujaron.distanthorizon.database.persistence.StationKey
+import com.dibujaron.distanthorizon.orbiter.station.Station
 import java.io.File
 import java.io.FileReader
 import java.util.*

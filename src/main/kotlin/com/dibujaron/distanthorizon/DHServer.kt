@@ -2,12 +2,13 @@ package com.dibujaron.distanthorizon
 
 import com.dibujaron.distanthorizon.command.CommandManager
 import com.dibujaron.distanthorizon.command.CommandSender
-import com.dibujaron.distanthorizon.database.DhDatabase
+import com.dibujaron.distanthorizon.database.DHDatabase
 import com.dibujaron.distanthorizon.database.impl.ExDatabase
 import com.dibujaron.distanthorizon.discord.DiscordManager
 import com.dibujaron.distanthorizon.login.PendingLoginManager
 import com.dibujaron.distanthorizon.orbiter.OrbiterManager
-import com.dibujaron.distanthorizon.orbiter.Station
+import com.dibujaron.distanthorizon.orbiter.station.Station
+import com.dibujaron.distanthorizon.orbiter.station.hold.dynamic.DynamicEconomyManager
 import com.dibujaron.distanthorizon.player.Player
 import com.dibujaron.distanthorizon.player.PlayerManager
 import com.dibujaron.distanthorizon.ship.Ship
@@ -48,7 +49,7 @@ object DHServer {
     const val DEFAULT_BALANCE = 1000
 
     private var shuttingDown = false
-    val serverProperties: Properties = loadProperties()
+    private val serverProperties: Properties = loadProperties()
     val restartCommand = serverProperties.getProperty("restart.command", "")
     val serverPort = serverProperties.getProperty("server.port", "25611").toInt()
     val serverSecret = serverProperties.getProperty("server.secret", "debug")
@@ -71,11 +72,12 @@ object DHServer {
         "jdbc:postgresql://localhost/distant_horizon?user=postgres&password=admin"
     )
     val dbDriver = serverProperties.getProperty("database.driver", "org.postgresql.Driver")
-    val shipNames = loadShipNames();
+    val shipNames = loadShipNames()
     init {
         sendBalancerPing()
         CommandManager.moduleInit()
         DiscordManager.moduleInit(serverProperties)
+        DynamicEconomyManager.moduleInit(serverProperties)
     }
 
     private val javalin = initJavalin(serverPort)
@@ -86,10 +88,10 @@ object DHServer {
             period = TICK_LENGTH_MILLIS_CEIL
         ) { mainLoop() }
 
-    private val database: DhDatabase = ExDatabase(dbUrl, dbDriver)
+    private val database: DHDatabase = ExDatabase(dbUrl, dbDriver)
     private var tickCount = 0
 
-    fun getDatabase(): DhDatabase {
+    fun getDatabase(): DHDatabase {
         return database
     }
 
@@ -177,7 +179,6 @@ object DHServer {
             .responseString{result -> result.get() }
     }
 
-    //gotta get rid of the confirmation step. Also token should be ageless, or long-lived.
     fun initJavalin(port: Int): Javalin {
         println("initializing javalin on port $port")
         return Javalin.create { config ->

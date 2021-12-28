@@ -1,7 +1,7 @@
 package com.dibujaron.distanthorizon.database.persistence
 
 import com.dibujaron.distanthorizon.orbiter.OrbiterManager
-import com.dibujaron.distanthorizon.orbiter.Station
+import com.dibujaron.distanthorizon.orbiter.station.Station
 import org.json.JSONObject
 
 open class ActorInfo(

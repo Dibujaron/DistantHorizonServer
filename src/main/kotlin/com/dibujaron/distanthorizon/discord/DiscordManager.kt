@@ -15,16 +15,13 @@ import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.collections.HashMap
 
-data class SentMessage(val sender: String, val message: String)
-
 object DiscordManager : EventHandler {
 
-    var CHANNEL_ID = ""
-    var BOT_TOKEN = ""
-    var BOT_USERNAME = ""
-    var expectingMessageFromSelf = false
+    private var CHANNEL_ID = ""
+    private var BOT_TOKEN = ""
+    private var BOT_USERNAME = ""
+    private var expectingMessageFromSelf = false
     private val scope = CoroutineScope(Dispatchers.Default)
-    private var recentlySentCache: Map<Long, SentMessage> = HashMap<Long, SentMessage>()
     fun moduleInit(properties: Properties) {
         BOT_TOKEN =
             properties.getProperty("discord.bot.token", "")

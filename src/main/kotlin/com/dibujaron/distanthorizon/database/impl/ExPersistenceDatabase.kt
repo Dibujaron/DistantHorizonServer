@@ -3,9 +3,7 @@ package com.dibujaron.distanthorizon.database.impl
 import StationKeyInternal
 import com.dibujaron.distanthorizon.DHServer
 import com.dibujaron.distanthorizon.database.persistence.*
-import com.dibujaron.distanthorizon.orbiter.CommodityType
-import com.dibujaron.distanthorizon.orbiter.OrbiterManager
-import com.dibujaron.distanthorizon.orbiter.Station
+import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.ship.ColorScheme
 import com.dibujaron.distanthorizon.ship.ShipClass
 import com.dibujaron.distanthorizon.ship.ShipClassManager
@@ -63,6 +61,78 @@ class ExPersistenceDatabase : PersistenceDatabase {
 
         return StationKeyInternal(stationRow[ExDatabase.Station.id])
     }
+
+    override fun selectCommodityStoreStatus(): List<CommodityStoreInfo> {
+        return transaction {
+            ExDatabase.StationCommmodityStore
+                .selectAll()
+                .map { mapCommodityStoreInfo(it) }
+        }
+    }
+
+    private fun mapCommodityStoreInfo(row: ResultRow): CommodityStoreInfo {
+        return CommodityStoreInfo(
+            StationKeyInternal(row[ExDatabase.StationCommmodityStore.station]),
+            CommodityType.fromString(row[ExDatabase.StationCommmodityStore.commodity]),
+            row[ExDatabase.StationCommmodityStore.price],
+            row[ExDatabase.StationCommmodityStore.quantity]
+        )
+    }
+
+    override fun updateCommodityStoreQuantity(commodity: CommodityType, station: StationKey, newQuantity: Int) {
+        val stationKeyFilter = ExDatabase.StationCommmodityStore.station eq (station as StationKeyInternal).id
+        val commodityTypeFilter = ExDatabase.StationCommmodityStore.commodity eq commodity.identifyingName
+        transaction {
+            ExDatabase.StationCommmodityStore.update({ stationKeyFilter and commodityTypeFilter }) {
+                it[quantity] = newQuantity
+            }
+        }
+    }
+
+    override fun updateCommodityStorePrice(commodity: CommodityType, station: StationKey, newPrice: Double) {
+        val stationKeyFilter = ExDatabase.StationCommmodityStore.station eq (station as StationKeyInternal).id
+        val commodityTypeFilter = ExDatabase.StationCommmodityStore.commodity eq commodity.identifyingName
+        transaction {
+            ExDatabase.StationCommmodityStore.update({ stationKeyFilter and commodityTypeFilter }) {
+                it[price] = newPrice
+            }
+        }
+    }
+
+    override fun selectOrCreateCommodityStore(
+        commodity: CommodityType,
+        station: StationKey,
+        initialPrice: Double,
+        initialQuantity: Int
+    ): CommodityStoreInfo {
+        val stationKeyFilter = ExDatabase.StationCommmodityStore.station eq (station as StationKeyInternal).id
+        val commodityTypeFilter = ExDatabase.StationCommmodityStore.commodity eq commodity.identifyingName
+        val storeInfo = transaction {
+            val firstResult: ResultRow? = ExDatabase.StationCommmodityStore
+                .select { stationKeyFilter and commodityTypeFilter }
+                .firstOrNull()
+
+            if (firstResult == null) {
+                val id = ExDatabase.StationCommmodityStore.insertAndGetId {
+                    it[ExDatabase.StationCommmodityStore.station] = station.id
+                    it[ExDatabase.StationCommmodityStore.commodity] = commodity.identifyingName
+                    it[price] = initialPrice
+                    it[quantity] = initialQuantity
+                }
+                val idFilter = (ExDatabase.StationCommmodityStore.id eq id)
+                ExDatabase.StationCommmodityStore.select { idFilter }.first()
+            } else {
+                firstResult
+            }
+        }
+        return CommodityStoreInfo(
+            station,
+            commodity,
+            storeInfo[ExDatabase.StationCommmodityStore.price],
+            storeInfo[ExDatabase.StationCommmodityStore.quantity]
+        )
+    }
+
 
     override fun selectOrCreateAccount(accountName: String): AccountInfo {
         val nameFilter = (ExDatabase.Account.accountName eq accountName)

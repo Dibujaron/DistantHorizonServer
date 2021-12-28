@@ -1,9 +1,9 @@
 package com.dibujaron.distanthorizon.database.impl
 
-import com.dibujaron.distanthorizon.database.DhDatabase
+import com.dibujaron.distanthorizon.database.DHDatabase
 import com.dibujaron.distanthorizon.database.persistence.PersistenceDatabase
 import com.dibujaron.distanthorizon.database.script.ScriptDatabase
-import com.dibujaron.distanthorizon.orbiter.CommodityType
+import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Database
@@ -12,7 +12,7 @@ import org.jetbrains.exposed.sql.name
 import org.jetbrains.exposed.sql.transactions.transaction
 
 //database impl using JetBrains Exposed
-class ExDatabase(databaseUrl: String, databaseDriver: String) : DhDatabase {
+class ExDatabase(databaseUrl: String, databaseDriver: String) : DHDatabase {
 
     private val scriptDatabase = ExScriptDatabase()
     private val persistenceDatabase = ExPersistenceDatabase()
@@ -20,7 +20,7 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DhDatabase {
         val result = Database.connect(databaseUrl, driver = databaseDriver)
         println("Routes database connected. Dialect: ${result.dialect.name}, DB Version: ${result.version}, Database Name: ${result.name}. ")
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(Route, RouteStep, Account, Actor, Ship)
+            SchemaUtils.createMissingTablesAndColumns(Route, RouteStep, Account, Actor, Ship, Station, StationCommmodityStore)
         }
     }
 
@@ -93,5 +93,12 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DhDatabase {
 
     object Station: IntIdTable("station") {
         var identifyingName: Column<String> =  varchar("identifying_name", 32);
+    }
+
+    object StationCommmodityStore: IntIdTable("station_commodity_store") {
+        val station = reference("station_id", Station.id)
+        val commodity: Column<String> = varchar("commodity_name", 64)
+        val quantity: Column<Int> = integer("quantity")
+        val price: Column<Double> = double("price")
     }
 }

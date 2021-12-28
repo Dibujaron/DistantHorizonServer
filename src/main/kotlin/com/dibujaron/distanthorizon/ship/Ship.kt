@@ -8,7 +8,7 @@ import com.dibujaron.distanthorizon.database.script.ScriptWriter
 import com.dibujaron.distanthorizon.docking.DockingPort
 import com.dibujaron.distanthorizon.docking.ShipDockingPort
 import com.dibujaron.distanthorizon.docking.StationDockingPort
-import com.dibujaron.distanthorizon.orbiter.CommodityType
+import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.orbiter.OrbiterManager
 import com.dibujaron.distanthorizon.orbiter.Planet
 import com.dibujaron.distanthorizon.player.Player

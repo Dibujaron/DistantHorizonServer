@@ -1,5 +1,6 @@
 package com.dibujaron.distanthorizon
 
+import com.dibujaron.distanthorizon.utils.AngleUtils
 import org.json.JSONObject
 import kotlin.math.*
 
@@ -9,7 +10,7 @@ class Vector2(val x: Double, val y: Double) {
     val angle: Double by lazy { atan2(y, x) }
     val lengthSquared: Double by lazy { x * x + y * y }
     val length: Double by lazy { sqrt(lengthSquared) }
-    val angleLimited: Double by lazy {AngleUtils.limitAngle(angle)}
+    val angleLimited: Double by lazy { AngleUtils.limitAngle(angle)}
     constructor(x: Int, y: Int) : this(x.toDouble(), y.toDouble())
     constructor(x: Int, y: Double) : this(x.toDouble(), y)
     constructor(x: Double, y: Int) : this(x, y.toDouble())

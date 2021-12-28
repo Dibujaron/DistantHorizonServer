@@ -2,7 +2,7 @@ package com.dibujaron.distanthorizon.ship
 
 import com.dibujaron.distanthorizon.Vector2
 import com.dibujaron.distanthorizon.docking.ShipClassDockingPort
-import com.dibujaron.distanthorizon.orbiter.CommodityType
+import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.player.Player
 import org.json.JSONArray
 import org.json.JSONObject
