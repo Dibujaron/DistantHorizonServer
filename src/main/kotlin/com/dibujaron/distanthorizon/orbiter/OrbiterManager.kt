@@ -94,6 +94,7 @@ object OrbiterManager {
         recursiveInitOrbiters(null, File("./world"))
         orbitersMap.values.forEach { it.initialize() }
         stationsMap.values.forEach { it.initAiScripts() }
+        println("Orbiter initialization complete.")
     }
 
     private fun recursiveInitOrbiters(parentName: String?, folder: File) {

@@ -73,6 +73,7 @@ object DHServer {
     )
     val dbDriver = serverProperties.getProperty("database.driver", "org.postgresql.Driver")
     val shipNames = loadShipNames()
+
     init {
         sendBalancerPing()
         CommandManager.moduleInit()
@@ -127,6 +128,10 @@ object DHServer {
     var lastTickTime = System.currentTimeMillis()
     var accumulator = 0.0
 
+    fun isShuttingDown(): Boolean {
+        return shuttingDown
+    }
+
     private fun mainLoop() {
         val tickTime = System.currentTimeMillis()
         val delta = tickTime - lastTickTime
@@ -146,7 +151,7 @@ object DHServer {
         ShipManager.tick()
         ScheduledTaskManager.tick()
         val ticksSinceLastBalancerPing = tickCount - lastBalancerPing
-        if(ticksSinceLastBalancerPing >= balancerPingsEveryTicks){
+        if (ticksSinceLastBalancerPing >= balancerPingsEveryTicks) {
             lastBalancerPing = tickCount
             sendBalancerPing()
         }
@@ -168,7 +173,7 @@ object DHServer {
         tickCount++
     }
 
-    private fun sendBalancerPing(){
+    private fun sendBalancerPing() {
         val payload = JSONObject()
         payload.put("secret", serverSecret)
         payload.put("player_count", PlayerManager.playerCount())
@@ -176,7 +181,7 @@ object DHServer {
         "http://distant-horizon.io/server_heartbeat"
             .httpPost()
             .jsonBody(payload.toString())
-            .responseString{result -> result.get() }
+            .responseString { result -> result.get() }
     }
 
     fun initJavalin(port: Int): Javalin {
@@ -238,7 +243,7 @@ object DHServer {
                 }
                 it.result(db.selectOrCreateAccount(acctName).toJSON().toString())
             }
-        }.get("/ecoData"){
+        }.get("/ecoData") {
             it.result(Station.createEconomyCSV())
         }.start(port)
     }
@@ -360,7 +365,7 @@ object DHServer {
         return factors
     }
 
-    private fun loadShipNames(): List<String>{
+    private fun loadShipNames(): List<String> {
         return File("./ship_names.txt").readLines()
     }
 }

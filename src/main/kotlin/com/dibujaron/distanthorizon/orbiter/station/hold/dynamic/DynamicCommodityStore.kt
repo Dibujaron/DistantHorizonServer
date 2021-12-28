@@ -68,7 +68,7 @@ class DynamicCommodityStore(type: CommodityType, val stationKey: StationKey, pro
     var lastUpdateTickQuantity = 0
     private fun quantityTick() {
         val currentTick = TimeUtils.getCurrentTickAbsolute()
-        if (currentTick - lastUpdateTickQuantity > UPDATE_TIME_TICKS) {
+        if (currentTick - lastUpdateTickQuantity > QUANTITY_UPDATE_TIME_TICKS) {
             var newQty = quantity + productionConsumptionRate
             if (newQty > initialQuantity) {
                 newQty = initialQuantity

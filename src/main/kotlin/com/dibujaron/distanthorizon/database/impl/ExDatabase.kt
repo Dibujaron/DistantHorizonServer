@@ -18,7 +18,7 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DHDatabase {
     private val persistenceDatabase = ExPersistenceDatabase()
     init {
         val result = Database.connect(databaseUrl, driver = databaseDriver)
-        println("Routes database connected. Dialect: ${result.dialect.name}, DB Version: ${result.version}, Database Name: ${result.name}. ")
+        println("Database connected. Dialect: ${result.dialect.name}, DB Version: ${result.version}, Database Name: ${result.name}. ")
         transaction {
             SchemaUtils.createMissingTablesAndColumns(Route, RouteStep, Account, Actor, Ship, Station, StationCommmodityStore)
         }

@@ -38,7 +38,7 @@ object DynamicEconomyManager {
     }
 
     private fun runThread() {
-        while(true){
+        while(!DHServer.isShuttingDown()){
             Thread.sleep(UPDATE_INTERVAL_MS)
             update()
         }
