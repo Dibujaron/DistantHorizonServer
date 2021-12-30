@@ -1,6 +1,7 @@
 package com.dibujaron.distanthorizon.player
 
 import com.dibujaron.distanthorizon.DHServer
+import com.dibujaron.distanthorizon.background.BackgroundTaskManager
 import com.dibujaron.distanthorizon.command.CommandSender
 import com.dibujaron.distanthorizon.command.Permission
 import com.dibujaron.distanthorizon.database.persistence.AccountInfo
@@ -208,12 +209,15 @@ class Player(val connection: WsContext) : CommandSender {
         var dbHook: ShipInfo? = null
         if (actor != null) {
             println("updating ship in database.")
-            val newActor = DHServer.getDatabase().getPersistenceDatabase()
-                .updateShipOfActor(actor, shipClass, name, colorScheme, shipClass.fuelTankSize.toDouble())
-            dbHook = newActor?.ship
+            BackgroundTaskManager.executeInBackground {
+                val newActor = DHServer.getDatabase().getPersistenceDatabase()
+                    .updateShipOfActor(actor, shipClass, name, colorScheme, shipClass.fuelTankSize.toDouble())
+                dbHook = newActor?.ship
+            }
         }
         val newHold: MutableMap<CommodityType, Int> = EnumMap(CommodityType::class.java)
-        val newShip = Ship(dbHook, shipClass, name, colorScheme, newHold, shipClass.fuelTankSize.toDouble(), ship.currentState, this)
+        val newPassengers: MutableList<EmbarkedPassengerGroup> = LinkedList()
+        val newShip = Ship(dbHook, shipClass, name, colorScheme, newHold, newPassengers, shipClass.fuelTankSize.toDouble(), ship.currentState, this)
         val oldShip = ship
         ship = newShip
         //newShip.currentState = oldShip.currentState //todo why was this done here? originally ship.currentState above was getStartingOrbit()

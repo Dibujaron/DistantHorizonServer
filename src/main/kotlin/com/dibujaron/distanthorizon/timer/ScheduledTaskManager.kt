@@ -1,13 +1,14 @@
 package com.dibujaron.distanthorizon.timer
 
+import com.dibujaron.distanthorizon.DHModule
 import java.util.concurrent.ConcurrentHashMap
 
-object ScheduledTaskManager {
+object ScheduledTaskManager: DHModule {
 
     private val tasks = ConcurrentHashMap<Int, ScheduledTask>()
     val nameIndex = HashMap<String, MutableSet<ScheduledTask>>()
     private var ticks = 0
-    fun tick() {
+    override fun tick() {
         tasks.values.asSequence()
             .filter { it.shouldTrigger() }
             .onEach { it.onTrigger() }

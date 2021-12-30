@@ -1,5 +1,6 @@
 package com.dibujaron.distanthorizon.orbiter
 
+import com.dibujaron.distanthorizon.DHModule
 import com.dibujaron.distanthorizon.Vector2
 import com.dibujaron.distanthorizon.database.persistence.StationKey
 import com.dibujaron.distanthorizon.orbiter.station.Station
@@ -9,7 +10,7 @@ import java.util.*
 import kotlin.collections.HashMap
 import kotlin.math.pow
 
-object OrbiterManager {
+object OrbiterManager: DHModule {
     private const val MIN_GRAVITY_FORCE_CUTOFF = 0.2
 
     private val orbitersMap: HashMap<String, Orbiter> = HashMap()
@@ -20,7 +21,7 @@ object OrbiterManager {
     private const val GRAVITY_FUDGE = 50.0
     val GRAVITY_CONSTANT = 6.67408 * 10.0.pow(-11.0) * GRAVITY_FUDGE
 
-    fun tick() {
+    override fun tick() {
         getOrbiters().forEach { it.tick() }
     }
 

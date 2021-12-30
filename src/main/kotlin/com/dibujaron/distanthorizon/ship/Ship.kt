@@ -2,6 +2,7 @@ package com.dibujaron.distanthorizon.ship
 
 import com.dibujaron.distanthorizon.DHServer
 import com.dibujaron.distanthorizon.Vector2
+import com.dibujaron.distanthorizon.background.BackgroundTaskManager
 import com.dibujaron.distanthorizon.database.persistence.ActorInfo
 import com.dibujaron.distanthorizon.database.persistence.ShipInfo
 import com.dibujaron.distanthorizon.database.script.ScriptWriter
@@ -24,6 +25,7 @@ open class Ship(
     val name: String,
     private val colorScheme: ColorScheme,
     private val hold: MutableMap<CommodityType, Int>,
+    private val passengers: MutableList<EmbarkedPassengerGroup>,
     var fuelLevel: Double,
     initialState: ShipState,
     val pilot: Player?
@@ -36,7 +38,7 @@ open class Ship(
         fuelLevel: Double,
         initialState: ShipState,
         pilot: Player?
-    ) : this(dbHook, type, name, type.getGoodColorScheme(), type.generateRandomHoldMap(), fuelLevel, initialState, pilot)
+    ) : this(dbHook, type, name, type.getGoodColorScheme(), type.generateRandomHoldMap(), LinkedList(), fuelLevel, initialState, pilot)
 
     var currentState: ShipState = initialState
     val uuid = UUID.randomUUID()
@@ -224,17 +226,25 @@ open class Ship(
         this.myDockedPort = shipPort
         this.dockedToPort = stationPort
         DHServer.broadcastShipDocked(this)
-        val database = DHServer.getDatabase().getPersistenceDatabase();
-        scriptWriter?.completeScript(stationPort.station.key)
-        pilot?.actorInfo?.let {
-            if (updateLastDocked) {
-                database.updateActorDockedStation(it, stationPort.station.key)
-                println("Updated last docked station of ${pilot.actorInfo?.displayName} to ${stationPort.station.name}")
+        BackgroundTaskManager.executeInBackground {
+            val database = DHServer.getDatabase()
+            val writer = scriptWriter
+            if(writer != null) {
+                val routeKey = writer.completeScript(stationPort.station.key)
+                val scriptDatabase = database.getScriptDatabase()
+                val script = scriptDatabase.selectScriptByKey(routeKey)
+                stationPort.station.asyncAddScript(script)
             }
-        }
-        if(dbHook != null && updateLastDocked)
-        {
-            database.updateShipFuelLevel(dbHook, fuelLevel)
+            val persistenceDatabase = database.getPersistenceDatabase()
+            pilot?.actorInfo?.let {
+                if (updateLastDocked) {
+                    persistenceDatabase.updateActorDockedStation(it, stationPort.station.key)
+                    println("Updated last docked station of ${pilot.actorInfo?.displayName} to ${stationPort.station.name}")
+                }
+            }
+            if (dbHook != null && updateLastDocked) {
+                persistenceDatabase.updateShipFuelLevel(dbHook, fuelLevel)
+            }
         }
     }
 
@@ -319,6 +329,7 @@ open class Ship(
                 DHServer.shipNames.random(),
                 colors,
                 EnumMap(CommodityType::class.java),
+                LinkedList(),
                 fuelLevel.toDouble(),
                 getStartingOrbit(),
                 player
@@ -327,19 +338,21 @@ open class Ship(
 
         fun createFromSave(player: Player, actorInfo: ActorInfo): Ship {
             val savedShip = actorInfo.ship
+            val embarkedPassengers = DHServer.getDatabase().getPersistenceDatabase().getPassengersOnShip(savedShip);
             return Ship(
                 savedShip,
                 savedShip.shipClass,
                 savedShip.name,
                 ColorScheme(savedShip.primaryColor, savedShip.secondaryColor),
                 savedShip.holdMap.toMutableMap(),
+                embarkedPassengers.toMutableList(),
                 savedShip.fuelLevel,
                 getStartingOrbit(),
                 player
             )
         }
 
-        fun getStartingOrbit(): ShipState {
+        private fun getStartingOrbit(): ShipState {
             val startingPlanetName = DHServer.startingPlanetName
             val startingPlanet: Planet = OrbiterManager.getPlanet(startingPlanetName)
                 ?: throw IllegalArgumentException("starting planet $startingPlanetName is null.")

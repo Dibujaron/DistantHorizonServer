@@ -5,10 +5,7 @@ import com.dibujaron.distanthorizon.DHServer
 import com.dibujaron.distanthorizon.Vector2
 import com.dibujaron.distanthorizon.database.persistence.*
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
-import com.dibujaron.distanthorizon.ship.ColorScheme
-import com.dibujaron.distanthorizon.ship.ShipClass
-import com.dibujaron.distanthorizon.ship.ShipClassManager
-import com.dibujaron.distanthorizon.ship.ShipColor
+import com.dibujaron.distanthorizon.ship.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -137,8 +134,6 @@ class ExPersistenceDatabase : PersistenceDatabase {
     override fun selectOrCreateAccount(accountName: String): AccountInfo {
         val nameFilter = (ExDatabase.Account.accountName eq accountName)
         val accountRow = transaction {
-            //todo better way to do "create if not exists"
-            //todo too many queries, figure out how to do joining properly with this framework
             val firstResult: ResultRow? = ExDatabase.Account
                 .select { nameFilter }
                 .firstOrNull()
@@ -365,13 +360,24 @@ class ExPersistenceDatabase : PersistenceDatabase {
         }
     }
 
-    override fun getWaitingPassengersAtStation(station: StationKey): List<WaitingPassengerGroupInfo> {
+    override fun selectWaitingPassengersAtStation(station: StationKey): List<WaitingPassengerGroupInfo> {
         val stationIDFilter = (ExDatabase.StationPassengerGroup.station eq (station as StationKeyInternal).id)
         return transaction {
             ExDatabase.StationPassengerGroup.select { stationIDFilter }
                 .map {
-                    val destStationkey = StationKeyInternal(it[ExDatabase.StationPassengerGroup.destinationStation])
-                    WaitingPassengerGroupInfo(station, destStationkey, it[ExDatabase.StationPassengerGroup.quantity])
+                    val destStationKey = StationKeyInternal(it[ExDatabase.StationPassengerGroup.destinationStation])
+                    WaitingPassengerGroupInfo(station, destStationKey, it[ExDatabase.StationPassengerGroup.quantity])
+                }
+        }
+    }
+
+    override fun selectWaitingPassengers(): List<WaitingPassengerGroupInfo> {
+        return transaction {
+            ExDatabase.StationPassengerGroup.selectAll()
+                .map {
+                    val sourceStationKey = StationKeyInternal(it[ExDatabase.StationPassengerGroup.station])
+                    val destStationKey = StationKeyInternal(it[ExDatabase.StationPassengerGroup.destinationStation])
+                    WaitingPassengerGroupInfo(sourceStationKey, destStationKey, it[ExDatabase.StationPassengerGroup.quantity])
                 }
         }
     }
@@ -381,7 +387,26 @@ class ExPersistenceDatabase : PersistenceDatabase {
         destStation: StationKey,
         waiting: Int
     ) {
-        TODO("Not yet implemented")
+        val sourceStationFilter = (ExDatabase.StationPassengerGroup.station eq (station as StationKeyInternal).id)
+        val targetStationFilter =
+            (ExDatabase.StationPassengerGroup.destinationStation eq (destStation as StationKeyInternal).id)
+        transaction {
+            val firstResult: ResultRow? = ExDatabase.Account
+                .select { sourceStationFilter and targetStationFilter }
+                .firstOrNull()
+
+            if (firstResult == null) {
+                ExDatabase.StationPassengerGroup.insert {
+                    it[ExDatabase.StationPassengerGroup.station] = station.id
+                    it[destinationStation] = destStation.id
+                    it[quantity] = waiting
+                }
+            } else {
+                ExDatabase.StationPassengerGroup.update({ sourceStationFilter and targetStationFilter }) {
+                    it[quantity] = waiting
+                }
+            }
+        }
     }
 
     override fun addPassengersToShip(
@@ -392,14 +417,47 @@ class ExPersistenceDatabase : PersistenceDatabase {
         embarkTime: Long,
         quantity: Int
     ) {
-        TODO("Not yet implemented")
+        transaction {
+            ExDatabase.EmbarkedPassengerGroup.insert {
+                it[ExDatabase.EmbarkedPassengerGroup.ship] = (ship as ShipInfoInternal).id
+                it[ExDatabase.EmbarkedPassengerGroup.originStation] = (originStation as StationKeyInternal).id
+                it[destinationStation] = (destStation as StationKeyInternal).id
+                it[loadedLocationX] = embarkLocation.x
+                it[loadedLocationY] = embarkLocation.y
+                it[loadedTime] = embarkTime
+                it[ExDatabase.EmbarkedPassengerGroup.quantity] = quantity
+            }
+        }
     }
 
-    override fun getPassengersOnShip(ship: ShipInfo): List<EmbarkedPassengerGroupInfo> {
-        TODO("Not yet implemented")
+    override fun getPassengersOnShip(ship: ShipInfo): List<EmbarkedPassengerGroup> {
+        val shipFilter = (ExDatabase.EmbarkedPassengerGroup.ship eq (ship as ShipInfoInternal).id)
+        return transaction {
+            ExDatabase.EmbarkedPassengerGroup.select { shipFilter }
+                .map {
+                    val originStation = StationKeyInternal(it[ExDatabase.EmbarkedPassengerGroup.originStation])
+                    val destStation = StationKeyInternal(it[ExDatabase.EmbarkedPassengerGroup.destinationStation])
+                    val originLocation = Vector2(
+                        it[ExDatabase.EmbarkedPassengerGroup.loadedLocationX],
+                        it[ExDatabase.EmbarkedPassengerGroup.loadedLocationY]
+                    )
+                    EmbarkedPassengerGroup(
+                        originStation,
+                        originLocation,
+                        it[ExDatabase.EmbarkedPassengerGroup.loadedTime],
+                        destStation,
+                        it[ExDatabase.EmbarkedPassengerGroup.quantity]
+                    )
+                }
+        }
     }
 
     override fun clearPassengersToStation(ship: ShipInfo, arrivalStation: StationKey) {
-        TODO("Not yet implemented")
+        val shipFilter = (ExDatabase.EmbarkedPassengerGroup.ship eq (ship as ShipInfoInternal).id)
+        val destStationFilter =
+            (ExDatabase.EmbarkedPassengerGroup.destinationStation eq (arrivalStation as StationKeyInternal).id)
+        transaction {
+            ExDatabase.EmbarkedPassengerGroup.deleteWhere { shipFilter and destStationFilter }
+        }
     }
 }

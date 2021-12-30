@@ -1,5 +1,6 @@
 package com.dibujaron.distanthorizon.orbiter.station.hold.dynamic
 
+import com.dibujaron.distanthorizon.DHModule
 import com.dibujaron.distanthorizon.DHServer
 import com.dibujaron.distanthorizon.database.persistence.StationKey
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
@@ -8,12 +9,12 @@ import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
 const val UPDATE_INTERVAL_MS = 5000L
-object DynamicEconomyManager {
+object DynamicEconomyManager : DHModule{
 
     private var USE_DYNAMIC_ECONOMY = false
 
     private val storeMap = HashMap<StoreKey, DynamicCommodityStore>()
-    fun moduleInit(serverProperties: Properties) {
+    override fun moduleInit(serverProperties: Properties) {
         USE_DYNAMIC_ECONOMY = serverProperties.getProperty("economy.dynamic", "true").toBoolean()
         if (USE_DYNAMIC_ECONOMY) {
             thread{ runThread()}
@@ -25,6 +26,7 @@ object DynamicEconomyManager {
         return USE_DYNAMIC_ECONOMY
     }
 
+    //todo refactor to be synchronous tick() and use background task to do selecting
     private fun runThread() {
         while(!DHServer.isShuttingDown()){
             Thread.sleep(UPDATE_INTERVAL_MS)

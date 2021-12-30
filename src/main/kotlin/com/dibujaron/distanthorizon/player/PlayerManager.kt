@@ -1,9 +1,10 @@
 package com.dibujaron.distanthorizon.player
 
+import com.dibujaron.distanthorizon.DHModule
 import io.javalin.websocket.WsContext
 import java.util.concurrent.ConcurrentHashMap
 
-object PlayerManager {
+object PlayerManager : DHModule {
     private val authenticatedUserMap: ConcurrentHashMap<String, Player> = ConcurrentHashMap()
     private val connectionMap: ConcurrentHashMap<WsContext, Player> = ConcurrentHashMap()
 
@@ -26,8 +27,13 @@ object PlayerManager {
         return connectionMap.size
     }
 
-    fun tick() {
+    override fun tick() {
         getPlayers(true).forEach { it.tick() }
+    }
+
+    override fun shutDown() {
+        getPlayers(false)
+            .forEach { it.sendServerMessageImmediate("This server has closed. Your progress was saved at your last docked station.") }
     }
 
     fun getPlayerByUsername(username: String): Player? {

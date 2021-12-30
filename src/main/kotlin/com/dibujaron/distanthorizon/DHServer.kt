@@ -10,13 +10,11 @@ import com.dibujaron.distanthorizon.login.PendingLoginManager
 import com.dibujaron.distanthorizon.orbiter.OrbiterManager
 import com.dibujaron.distanthorizon.orbiter.station.Station
 import com.dibujaron.distanthorizon.orbiter.station.hold.dynamic.DynamicEconomyManager
+import com.dibujaron.distanthorizon.orbiter.station.passenger.WaitingRoomManager
 import com.dibujaron.distanthorizon.player.Player
 import com.dibujaron.distanthorizon.player.PlayerManager
 import com.dibujaron.distanthorizon.ship.Ship
 import com.dibujaron.distanthorizon.ship.ShipManager
-import com.dibujaron.distanthorizon.timer.ScheduledTaskManager
-import com.github.kittinunf.fuel.core.extensions.jsonBody
-import com.github.kittinunf.fuel.httpPost
 import io.javalin.Javalin
 import io.javalin.websocket.WsBinaryMessageContext
 import io.javalin.websocket.WsCloseContext
@@ -74,13 +72,24 @@ object DHServer {
         "jdbc:mysql://root:admin@localhost:3306/distant_horizon"
     )
     val dbDriver = serverProperties.getProperty("database.driver", "com.mysql.cj.jdbc.Driver")
+    private val database: DHDatabase = ExDatabase(dbUrl, dbDriver)
+
     val shipNames = loadShipNames()
 
+    private val modules: List<DHModule> = listOf(
+        CommandManager,
+        DiscordManager,
+        DynamicEconomyManager,
+        BackgroundTaskManager,
+        OrbiterManager,
+        PlayerManager,
+        WaitingRoomManager,
+        BalancerPingManager,
+        ShipManager
+    )
+
     init {
-        sendBalancerPing()
-        CommandManager.moduleInit()
-        DiscordManager.moduleInit(serverProperties)
-        DynamicEconomyManager.moduleInit(serverProperties)
+        modules.forEach { it.moduleInit(serverProperties) }
     }
 
     private val javalin = initJavalin(serverPort)
@@ -91,7 +100,6 @@ object DHServer {
             period = TICK_LENGTH_MILLIS_CEIL
         ) { mainLoop() }
 
-    private val database: DHDatabase = ExDatabase(dbUrl, dbDriver)
     private var tickCount = 0
 
     fun getDatabase(): DHDatabase {
@@ -113,11 +121,9 @@ object DHServer {
 
     fun shutDown() {
         shuttingDown = true;
-        PlayerManager.getPlayers(false)
-            .forEach { it.sendServerMessageImmediate("This server has closed. Your progress was saved at your last docked station.") }
         timer.cancel()
         javalin.stop()
-        BackgroundTaskManager.shutdown()
+        modules.forEach { it.shutDown() }
     }
 
     fun restart(sender: CommandSender? = null) {
@@ -148,16 +154,9 @@ object DHServer {
         lastTickTime = tickTime
     }
 
-    var lastBalancerPing = 0
     private fun tick() {
-        OrbiterManager.tick()
-        ShipManager.tick()
-        ScheduledTaskManager.tick()
-        val ticksSinceLastBalancerPing = tickCount - lastBalancerPing
-        if (ticksSinceLastBalancerPing >= balancerPingsEveryTicks) {
-            lastBalancerPing = tickCount
-            sendBalancerPing()
-        }
+        modules.forEach{it.tick()}
+
         val isWorldStateMessageTick = tickCount % worldHeartbeatsEvery == worldHeartbeatsTickOffset
         if (isWorldStateMessageTick) {
             val worldStateMessage = composeWorldStateMessage()
@@ -172,22 +171,10 @@ object DHServer {
                 .filter { it.initialized }
                 .forEach { it.queueShipHeartbeatsMsg(shipHeartbeatsMessage) }
         }
-        PlayerManager.tick()
         tickCount++
     }
 
-    private fun sendBalancerPing() {
-        val payload = JSONObject()
-        payload.put("secret", serverSecret)
-        payload.put("player_count", PlayerManager.playerCount())
-        payload.put("server_limit", maxPlayers)
-        "http://distant-horizon.io/server_heartbeat"
-            .httpPost()
-            .jsonBody(payload.toString())
-            .responseString { result -> result.get() }
-    }
-
-    fun initJavalin(port: Int): Javalin {
+    private fun initJavalin(port: Int): Javalin {
         println("initializing javalin on port $port")
         return Javalin.create { config ->
             config.defaultContentType = "application/json"
@@ -344,7 +331,7 @@ object DHServer {
         }
     }
 
-    fun loadProperties(): Properties {
+    private fun loadProperties(): Properties {
         val p = Properties()
         val f = File("./server.properties")
         if (f.exists()) {

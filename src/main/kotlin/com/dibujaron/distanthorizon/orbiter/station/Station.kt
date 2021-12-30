@@ -10,6 +10,7 @@ import com.dibujaron.distanthorizon.orbiter.station.hold.fixed.FixedValueStation
 import com.dibujaron.distanthorizon.orbiter.station.hold.StationHold
 import com.dibujaron.distanthorizon.orbiter.station.hold.dynamic.DynamicEconomyManager
 import com.dibujaron.distanthorizon.orbiter.station.hold.dynamic.DynamicStationHold
+import com.dibujaron.distanthorizon.orbiter.station.passenger.StationPassengerWaitingRoom
 import com.dibujaron.distanthorizon.player.Player
 import com.dibujaron.distanthorizon.player.wallet.Wallet
 import com.dibujaron.distanthorizon.ship.*
@@ -17,6 +18,7 @@ import com.dibujaron.distanthorizon.utils.TimeUtils
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.ArrayList
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -27,23 +29,22 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
 
     val key = DHServer.getDatabase().getPersistenceDatabase().selectOrCreateStation(stationName, properties)
     val dockingPorts = LinkedList<StationDockingPort>()
-    val splashTextList = ArrayList<String>()
-    val dealerships = HashMap<Manufacturer, Int>()
-    val navigable = properties.getProperty("navigable", "true").toBoolean()
-    val fuelPrice = properties.getProperty("fuel.price").toDouble()
-    private var aiScripts: MutableMap<Int, MutableSet<ScriptReader>> = TreeMap()
+    private val splashTextList = ArrayList<String>()
+    private val dealerships = HashMap<Manufacturer, Int>()
+    private val navigable = properties.getProperty("navigable", "true").toBoolean()
+    private val fuelPrice = properties.getProperty("fuel.price").toDouble()
+    private var aiScripts: MutableMap<Int, MutableSet<ScriptReader>> = ConcurrentHashMap()
 
     private val hold: StationHold =
         if (DynamicEconomyManager.isEnabled())
             DynamicStationHold(key, properties)
         else FixedValueStationHold(properties)
 
+    val waitingRoom: StationPassengerWaitingRoom = StationPassengerWaitingRoom(key)
+
     init {
         dockingPorts.add(StationDockingPort(this, Vector2(7.0, 0.5), -90.0))
         dockingPorts.add(StationDockingPort(this, Vector2(-7.0, 0.5), 90.0))
-        if (aiScripts.isNotEmpty()) {
-            println("loaded ${aiScripts.size} ai scripts for station $name")
-        }
         var index = 0
         var currentSplash = properties.getProperty("splash.$index", null)
         while (currentSplash != null) {
@@ -59,10 +60,6 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
         }
     }
 
-    fun initCommodityStores() {
-
-    }
-
     fun initAiScripts() {
         if (this.navigable) {
             DHServer.getDatabase().getScriptDatabase()
@@ -72,32 +69,25 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
         }
     }
 
+    fun asyncAddScript(it: ScriptReader) {
+        if (this.navigable) {
+            aiScripts.getOrPut(it.getDepartureTick()) { mutableSetOf() }.add(it)
+        }
+    }
+
     override fun tick() {
+        super.tick()
         hold.tick()
+        waitingRoom.tick()
         aiScripts.getOrElse(TimeUtils.getCurrentTickInCycle()) { setOf() }.forEach {
             ShipManager.addShip(AIShip(it.copy()))
         }
 
-        super.tick()
-    }
-
-    fun getState(): ShipState {
-        return ShipState(globalPos(), globalRotation(), velocity())
     }
 
     fun globalRotation(): Double {
-        val vecToParent = relativePos * -1.0;
-        return vecToParent.angle;
-    }
-
-    fun globalRotationAtTime(timeOffset: Double): Double {
-        val vecToParentAtTime = relativePosAtTime(timeOffset) * -1.0
-        return vecToParentAtTime.angle
-    }
-
-    fun globalRotationAtTick(tickOffset: Double): Double {
-        val vecToParentAtTime = relativePosAtTick(tickOffset) * -1.0
-        return vecToParentAtTime.angle
+        val vecToParent = relativePos * -1.0
+        return vecToParent.angle
     }
 
     fun createShopMessage(player: Player): JSONObject {

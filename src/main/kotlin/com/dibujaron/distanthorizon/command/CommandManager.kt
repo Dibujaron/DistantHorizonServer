@@ -1,15 +1,17 @@
 package com.dibujaron.distanthorizon.command
 
+import com.dibujaron.distanthorizon.DHModule
 import com.dibujaron.distanthorizon.event.EventHandler
 import com.dibujaron.distanthorizon.event.EventManager
 import com.dibujaron.distanthorizon.event.PlayerChatEvent
 import com.dibujaron.distanthorizon.player.Player
+import java.util.*
 
-object CommandManager : EventHandler {
+object CommandManager : DHModule, EventHandler {
 
     private val CONSOLE_SENDER = ConsoleCommandSender()
 
-    fun moduleInit() {
+    override fun moduleInit(serverProperties: Properties) {
         EventManager.registerEvents(this)
     }
 
@@ -18,7 +20,7 @@ object CommandManager : EventHandler {
         event.cancelled = handled
     }
 
-    fun handlePlayerCommand(issuer: Player, commandStr: String): Boolean {
+    private fun handlePlayerCommand(issuer: Player, commandStr: String): Boolean {
         if (commandStr.startsWith("/")) {
             println("handling command $commandStr from player ${issuer.getUsername()}")
             val commandAndArgs = commandStr.substring(1)

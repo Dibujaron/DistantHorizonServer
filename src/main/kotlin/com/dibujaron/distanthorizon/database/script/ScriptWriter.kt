@@ -5,5 +5,5 @@ import com.dibujaron.distanthorizon.ship.ShipInputs
 
 interface ScriptWriter {
     fun writeAction(action: ShipInputs)
-    fun completeScript(dockedStation: StationKey)
+    fun completeScript(dockedStation: StationKey): RouteKey
 }

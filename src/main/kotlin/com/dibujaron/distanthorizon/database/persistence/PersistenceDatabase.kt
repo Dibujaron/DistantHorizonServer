@@ -3,6 +3,7 @@ package com.dibujaron.distanthorizon.database.persistence
 import com.dibujaron.distanthorizon.Vector2
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.ship.ColorScheme
+import com.dibujaron.distanthorizon.ship.EmbarkedPassengerGroup
 import com.dibujaron.distanthorizon.ship.ShipClass
 import java.util.*
 
@@ -34,7 +35,8 @@ interface PersistenceDatabase {
         initialQuantity: Int
     ): CommodityStoreInfo
 
-    fun getWaitingPassengersAtStation(station: StationKey): List<WaitingPassengerGroupInfo>
+    fun selectWaitingPassengersAtStation(station: StationKey): List<WaitingPassengerGroupInfo>
+    fun selectWaitingPassengers(): List<WaitingPassengerGroupInfo>
     fun updateWaitingPassengersAtStationForDestination(station: StationKey, destStation: StationKey, waiting: Int)
 
     fun addPassengersToShip(
@@ -46,7 +48,7 @@ interface PersistenceDatabase {
         quantity: Int
     )
 
-    fun getPassengersOnShip(ship: ShipInfo): List<EmbarkedPassengerGroupInfo>
+    fun getPassengersOnShip(ship: ShipInfo): List<EmbarkedPassengerGroup>
 
     fun clearPassengersToStation(ship: ShipInfo, arrivalStation: StationKey)
 

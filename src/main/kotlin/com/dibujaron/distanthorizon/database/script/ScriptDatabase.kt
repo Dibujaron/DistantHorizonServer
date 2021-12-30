@@ -8,6 +8,7 @@ import com.dibujaron.distanthorizon.ship.ShipState
 interface ScriptDatabase {
     fun selectStationsWithScripts(): List<StationKey>
     fun selectScriptsForStation(sourceStation: StationKey): List<ScriptReader>
+    fun selectScriptByKey(routeKey: RouteKey): ScriptReader
     fun selectAvailableScript(sourceStation: StationKey, targetStation: StationKey, earliestDepartureTick: Int, latestDepartureTick: Int): ScriptReader?
     fun selectAvailableScriptToAnywhere(sourceStation: StationKey, earliestDepartureTick: Int, latestDepartureTick: Int): ScriptReader?
     fun beginLoggingScript(actor: ActorInfo?, sourceStation: StationKey, startState: ShipState, shipClass: ShipClass): ScriptWriter

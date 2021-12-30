@@ -1,5 +1,6 @@
 package com.dibujaron.distanthorizon.discord
 
+import com.dibujaron.distanthorizon.DHModule
 import com.dibujaron.distanthorizon.event.EventHandler
 import com.dibujaron.distanthorizon.event.EventManager
 import com.dibujaron.distanthorizon.event.PlayerChatEvent
@@ -15,18 +16,19 @@ import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.collections.HashMap
 
-object DiscordManager : EventHandler {
+object DiscordManager : DHModule, EventHandler {
 
     private var CHANNEL_ID = ""
     private var BOT_TOKEN = ""
     private var BOT_USERNAME = ""
     private var expectingMessageFromSelf = false
     private val scope = CoroutineScope(Dispatchers.Default)
-    fun moduleInit(properties: Properties) {
+
+    override fun moduleInit(serverProperties: Properties) {
         BOT_TOKEN =
-            properties.getProperty("discord.bot.token", "")
-        CHANNEL_ID = properties.getProperty("discord.bot.channel.id", "")
-        BOT_USERNAME = properties.getProperty("discord.bot.username", "Ingame Chat")
+            serverProperties.getProperty("discord.bot.token", "")
+        CHANNEL_ID = serverProperties.getProperty("discord.bot.channel.id", "")
+        BOT_USERNAME = serverProperties.getProperty("discord.bot.username", "Ingame Chat")
         if (BOT_TOKEN.isNotEmpty() && CHANNEL_ID.isNotEmpty()) {
             EventManager.registerEvents(this)
             println("Discord integration enabled, launching bot.")

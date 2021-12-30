@@ -1,9 +1,11 @@
 package com.dibujaron.distanthorizon.database.impl
 
+import RouteKeyInternal
 import StationKeyInternal
 import com.dibujaron.distanthorizon.Vector2
 import com.dibujaron.distanthorizon.database.persistence.ActorInfo
 import com.dibujaron.distanthorizon.database.persistence.StationKey
+import com.dibujaron.distanthorizon.database.script.RouteKey
 import com.dibujaron.distanthorizon.database.script.ScriptDatabase
 import com.dibujaron.distanthorizon.database.script.ScriptReader
 import com.dibujaron.distanthorizon.database.script.ScriptWriter
@@ -46,6 +48,14 @@ class ExScriptDatabase : ScriptDatabase {
                 .map { RelationalScriptReader(it) }
         }
     }
+
+    override fun selectScriptByKey(routeKey: RouteKey): ScriptReader {
+        val idFilter = (ExDatabase.Route.id eq (routeKey as RouteKeyInternal).id)
+        return transaction {
+            RelationalScriptReader(ExDatabase.Route
+                .select { idFilter }
+                .first())
+        }    }
 
     //for now, the best script is the one with the earliest arrival date.
     override fun selectAvailableScript(
@@ -205,15 +215,14 @@ class ExScriptDatabase : ScriptDatabase {
             steps[TimeUtils.getCurrentTickInCycle()] = action
         }
 
-        //todo make not blocking if required
-        override fun completeScript(dockedStation: StationKey) {
+        override fun completeScript(dockedStation: StationKey): RouteKey {
             println("Saving script...")
             val pilotId = if (actor == null) {
                 null
             } else {
                 (actor as ExPersistenceDatabase.ActorInfoInternal).id
             }
-            transaction {
+            val routeId = transaction {
                 val newRouteId = ExDatabase.Route.insertAndGetId {
                     it[originStation] = (sourceStation as StationKeyInternal).id
                     it[destinationStation] = (dockedStation as StationKeyInternal).id
@@ -241,8 +250,11 @@ class ExScriptDatabase : ScriptDatabase {
                     this[ExDatabase.RouteStep.foreThrusters] = inputs.foreThrustersActive
                     this[ExDatabase.RouteStep.aftThrusters] = inputs.aftThrustersActive
                 }
+
+                newRouteId
             }
             println("Script saved, step count is ${steps.size}.")
+            return RouteKeyInternal(routeId)
         }
     }
 
