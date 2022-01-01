@@ -116,7 +116,7 @@ class Player(val connection: WsContext) : CommandSender {
     }
 
     fun queueIncomingMessageFromClient(message: JSONObject) {
-        if (DHServer.REQUEST_BATCHING) {
+        if (DHServer.requestBatching) {
             incomingMessageQueue.add(message)
         } else {
             processIncomingMessage(message)
@@ -322,7 +322,7 @@ class Player(val connection: WsContext) : CommandSender {
     }
 
     fun queueMessage(message: JSONObject) {
-        if (DHServer.REQUEST_BATCHING) {
+        if (DHServer.requestBatching) {
             outgoingMessageQueue.add(message)
         } else {
             sendMessage(message)

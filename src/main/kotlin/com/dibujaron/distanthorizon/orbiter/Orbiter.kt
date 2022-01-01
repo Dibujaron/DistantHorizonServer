@@ -149,11 +149,11 @@ fun adjustOrbitalRadiusToMatchCycleLength(originalPos: Vector2, parentMass: Doub
     val originalRadius = originalPos.length
     val originalPeriodSeconds = periodFromRadius(originalRadius, OrbiterManager.GRAVITY_CONSTANT, parentMass)
     val originalPeriod = TimeUtils.secondsToTicks(originalPeriodSeconds)
-    val possiblePeriods = DHServer.FACTORS_OF_CYCLE_LENGTH
+    val possiblePeriods = DHServer.factorsOfCycleLengthTicks
     var lowerPossibility = possiblePeriods.floor(floor(originalPeriod).toInt())
     if(lowerPossibility == null) lowerPossibility = 0
     var higherPossibility = possiblePeriods.ceiling(ceil(originalPeriod).toInt())
-    if(higherPossibility == null) higherPossibility = DHServer.CYCLE_LENGTH_TICKS
+    if(higherPossibility == null) higherPossibility = DHServer.cycleLengthTicks
     val lowerDiff = abs(originalPeriod - lowerPossibility)
     val higherDiff = abs(higherPossibility - originalPeriod)
     val result = if(lowerDiff < higherDiff) lowerPossibility else higherPossibility

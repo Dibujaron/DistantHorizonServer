@@ -4,7 +4,7 @@ import com.dibujaron.distanthorizon.DHServer
 
 class GuestWallet() : Wallet
 {
-    var bal = DHServer.DEFAULT_BALANCE
+    var bal = DHServer.startingBalance
 
     override fun getBalance(): Int {
         return bal

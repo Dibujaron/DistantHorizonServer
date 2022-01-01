@@ -8,14 +8,17 @@ import java.util.*
 
 object BalancerPingManager: DHModule {
 
+    var balancerPingsEveryTicks = 30 * 60
     override fun moduleInit(serverProperties: Properties) {
+        val balancerPingsEverySeconds = serverProperties.getProperty("balancer.pings.seconds", "30").toInt()
+        balancerPingsEveryTicks = balancerPingsEverySeconds * DHServer.TICKS_PER_SECOND
         sendBalancerPing()
     }
 
     var lastBalancerPing = 0
     override fun tick() {
         val ticksSinceLastBalancerPing = DHServer.getTickCount() - lastBalancerPing
-        if (ticksSinceLastBalancerPing >= DHServer.balancerPingsEveryTicks) {
+        if (ticksSinceLastBalancerPing >= balancerPingsEveryTicks) {
             lastBalancerPing = DHServer.getTickCount()
             sendBalancerPing()
         }

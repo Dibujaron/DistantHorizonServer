@@ -215,7 +215,7 @@ class ExPersistenceDatabase : PersistenceDatabase {
                 ExDatabase.Actor.insert {
                     it[ownedByAccount] = acctId
                     it[displayName] = actorDisplayName
-                    it[balance] = DHServer.DEFAULT_BALANCE
+                    it[balance] = DHServer.startingBalance
                     it[lastDockedStation] = null
                     it[currentShip] = shipId
                 }

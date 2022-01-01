@@ -40,33 +40,28 @@ object DHServer {
     val TICK_LENGTH_MILLIS_CEIL = ceil(TICK_LENGTH_MILLIS).toLong()
     const val TICKS_PER_SECOND = 60
 
-    const val CYCLE_LENGTH_TICKS = 83160/*TICKS_PER_SECOND * 60 * 12  //cycle every 12m*/
-    val FACTORS_OF_CYCLE_LENGTH = factors(CYCLE_LENGTH_TICKS)
-
-    const val REQUEST_BATCHING = true
-
-    const val DEFAULT_BALANCE = 1000
-
     private var shuttingDown = false
     private val serverProperties: Properties = loadProperties()
-    val restartCommand = serverProperties.getProperty("restart.command", "")
-    val serverPort = serverProperties.getProperty("server.port", "25611").toInt()
-    val serverSecret = serverProperties.getProperty("server.secret", "debug")
+    private val restartCommand: String = serverProperties.getProperty("restart.command", "")
+    private val serverPort = serverProperties.getProperty("server.port", "25611").toInt()
+    val serverSecret: String = serverProperties.getProperty("server.secret", "debug")
     val maxPlayers = serverProperties.getProperty("max.players", "60").toInt()
-    val shipHeartbeatsEvery = serverProperties.getProperty("heartbeats.ship", "60").toInt()
-    val shipHeartbeatsTickOffset = serverProperties.getProperty("heartbeats.ship.offset", "0").toInt()
-    val worldHeartbeatsEvery = serverProperties.getProperty("heartbeats.world", "10").toInt()
-    val worldHeartbeatsTickOffset = serverProperties.getProperty("heartbeats.world.offset", "0").toInt()
-    val balancerPingsEverySeconds = serverProperties.getProperty("balancer.pings.seconds", "30").toInt()
-    val balancerPingsEveryTicks = balancerPingsEverySeconds * TICKS_PER_SECOND
-    val playerStartingShip = serverProperties.getProperty("starting.ship", "rijay.crusader")
-    val startingPlanetName = serverProperties.getProperty("starting.planet", "Rakuri")
+    private val shipHeartbeatsEvery = serverProperties.getProperty("heartbeats.ship", "60").toInt()
+    private val shipHeartbeatsTickOffset = serverProperties.getProperty("heartbeats.ship.offset", "0").toInt()
+    private val worldHeartbeatsEvery = serverProperties.getProperty("heartbeats.world", "10").toInt()
+    private val worldHeartbeatsTickOffset = serverProperties.getProperty("heartbeats.world.offset", "0").toInt()
+    val playerStartingShip: String = serverProperties.getProperty("starting.ship", "rijay.crusader")
+    val startingPlanetName: String = serverProperties.getProperty("starting.planet", "Rakuri")
     val startingOrbitalRadius = serverProperties.getProperty("starting.radius", "400.0").toDouble()
     val startingOrbitalSpeed = serverProperties.getProperty("starting.speed", "25.0").toDouble()
     val dockingSpeed = serverProperties.getProperty("docking.speed", "200.0").toDouble()
     val dockingDist = serverProperties.getProperty("docking.distance", "200.0").toDouble()
     var debug = serverProperties.getProperty("debug", "true").toBoolean()
     val isMaster = serverProperties.getProperty("master", "true").toBoolean()
+    val cycleLengthTicks = serverProperties.getProperty("cycle.length.ticks", "83160").toInt()
+    val factorsOfCycleLengthTicks = factors(cycleLengthTicks)
+    val requestBatching = serverProperties.getProperty("request.batching", "true").toBoolean()
+    val startingBalance = serverProperties.getProperty("starting.balance", "1000").toInt()
     val dbUrl = serverProperties.getProperty(
         "database.url",
         "jdbc:mysql://root:admin@localhost:3306/distant_horizon"
