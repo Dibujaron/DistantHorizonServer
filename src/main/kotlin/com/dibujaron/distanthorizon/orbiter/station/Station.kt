@@ -40,7 +40,7 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
             DynamicStationHold(key, properties)
         else FixedValueStationHold(properties)
 
-    val waitingRoom: StationPassengerWaitingRoom = StationPassengerWaitingRoom(key)
+    val waitingRoom: StationPassengerWaitingRoom = StationPassengerWaitingRoom(key, properties)
 
     init {
         dockingPorts.add(StationDockingPort(this, Vector2(7.0, 0.5), -90.0))
