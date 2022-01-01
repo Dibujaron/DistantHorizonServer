@@ -5,6 +5,7 @@ import com.dibujaron.distanthorizon.Vector2
 import com.dibujaron.distanthorizon.background.BackgroundTaskManager
 import com.dibujaron.distanthorizon.database.persistence.ActorInfo
 import com.dibujaron.distanthorizon.database.persistence.ShipInfo
+import com.dibujaron.distanthorizon.database.persistence.StationKey
 import com.dibujaron.distanthorizon.database.script.ScriptWriter
 import com.dibujaron.distanthorizon.docking.DockingPort
 import com.dibujaron.distanthorizon.docking.ShipDockingPort
@@ -17,6 +18,7 @@ import com.dibujaron.distanthorizon.player.PlayerManager
 import com.dibujaron.distanthorizon.player.wallet.Wallet
 import org.json.JSONObject
 import java.util.*
+import kotlin.math.min
 import kotlin.math.pow
 
 open class Ship(
@@ -38,7 +40,17 @@ open class Ship(
         fuelLevel: Double,
         initialState: ShipState,
         pilot: Player?
-    ) : this(dbHook, type, name, type.getGoodColorScheme(), type.generateRandomHoldMap(), LinkedList(), fuelLevel, initialState, pilot)
+    ) : this(
+        dbHook,
+        type,
+        name,
+        type.getGoodColorScheme(),
+        type.generateRandomHoldMap(),
+        LinkedList(),
+        fuelLevel,
+        initialState,
+        pilot
+    )
 
     var currentState: ShipState = initialState
     val uuid = UUID.randomUUID()
@@ -74,7 +86,7 @@ open class Ship(
         val newLevel = fuelLevel + delta
         println("Bought $delta fuel, level was $fuelLevel, new level is $newLevel")
         fuelLevel = newLevel
-        if(dbHook != null) {
+        if (dbHook != null) {
             DHServer.getDatabase().getPersistenceDatabase().updateShipFuelLevel(dbHook, fuelLevel)
         }
     }
@@ -96,7 +108,7 @@ open class Ship(
     fun tick() {
         val dockedTo = dockedToPort
         val dockedFrom = myDockedPort
-        if (controls.mainEnginesActive) {
+        if (controls.mainEnginesActive && dockedTo == null && dockedFrom == null) {
             fuelLevel = if (fuelLevel < type.fuelBurnRatePerTick) 0.0 else fuelLevel - type.fuelBurnRatePerTick
         }
         currentState = if (dockedTo != null && dockedFrom != null) {
@@ -229,7 +241,7 @@ open class Ship(
         BackgroundTaskManager.executeInBackground {
             val database = DHServer.getDatabase()
             val writer = scriptWriter
-            if(writer != null) {
+            if (writer != null) {
                 val routeKey = writer.completeScript(stationPort.station.key)
                 val scriptDatabase = database.getScriptDatabase()
                 val script = scriptDatabase.selectScriptByKey(routeKey)
@@ -315,6 +327,43 @@ open class Ship(
         if (isDocked()) {
             val station = dockedToPort!!.station
             station.sellFuelToShip(purchasingWallet, this, quantity)
+        }
+    }
+
+
+    fun loadPassengers(destStation: StationKey, loadQuantity: Int) {
+        if (isDocked()) {
+            val station = dockedToPort!!.station
+            val waitingRoom = station.waitingRoom
+            val waitingPassengers = waitingRoom.waitingPassengers
+            val existingQuantity = waitingPassengers[destStation] ?: 0
+            val newLoadQuantity = min(existingQuantity, loadQuantity)
+            val newWaitingQuantity = existingQuantity - newLoadQuantity
+            waitingPassengers[destStation] = newWaitingQuantity
+            val embarkLocation = currentState.position
+            val embarkTime = System.currentTimeMillis()
+            val embarkedPassengerGroup = EmbarkedPassengerGroup(
+                station.key,
+                embarkLocation,
+                embarkTime,
+                destStation,
+                newLoadQuantity
+            )
+            passengers.add(embarkedPassengerGroup)
+            val hook = dbHook
+            if (hook != null) {
+                BackgroundTaskManager.executeInBackground {
+                    DHServer.getDatabase().getPersistenceDatabase()
+                        .movePassengersFromStationToShip(
+                            hook,
+                            station.key,
+                            destStation,
+                            embarkLocation,
+                            embarkTime,
+                            newLoadQuantity
+                        )
+                }
+            }
         }
     }
 

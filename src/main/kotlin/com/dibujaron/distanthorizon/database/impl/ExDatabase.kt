@@ -117,6 +117,7 @@ class ExDatabase(databaseUrl: String, databaseDriver: String) : DHDatabase {
         val station = reference("station_id", Station.id)
         val destinationStation = reference("dest_station_id", Station.id)
         val quantity: Column<Int> = integer("quantity")
+        val waitingSince: Column<Long> = long("waiting_since")
     }
 
     object EmbarkedPassengerGroup : IntIdTable("embarked_passenger_group") {

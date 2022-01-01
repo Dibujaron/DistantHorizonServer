@@ -37,9 +37,8 @@ interface PersistenceDatabase {
 
     fun selectWaitingPassengersAtStation(station: StationKey): List<WaitingPassengerGroupInfo>
     fun selectWaitingPassengers(): List<WaitingPassengerGroupInfo>
-    fun updateWaitingPassengersAtStationForDestination(station: StationKey, destStation: StationKey, waiting: Int)
-
-    fun addPassengersToShip(
+    fun addWaitingPassengers(station: StationKey, destStation: StationKey, numPassengers: Int, waitingSince: Long)
+    fun movePassengersFromStationToShip(
         ship: ShipInfo,
         originStation: StationKey,
         destStation: StationKey,
@@ -49,7 +48,6 @@ interface PersistenceDatabase {
     )
 
     fun getPassengersOnShip(ship: ShipInfo): List<EmbarkedPassengerGroup>
-
     fun clearPassengersToStation(ship: ShipInfo, arrivalStation: StationKey)
-
+    fun clearWaitingPassengersWaitingSinceBefore(timestampThreshold: Long)
 }

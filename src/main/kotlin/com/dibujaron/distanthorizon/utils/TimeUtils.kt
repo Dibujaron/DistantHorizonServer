@@ -16,8 +16,8 @@ object TimeUtils {
         return getCurrentTickAbsolute() / DHServer.CYCLE_LENGTH_TICKS
     }
 
-    fun getNextCycleStartTick(): Int {
-        return getNextCycleStartTick() + DHServer.CYCLE_LENGTH_TICKS
+    private fun getNextCycleStartTick(): Int {
+        return getCurrentCycleStartTick() + DHServer.CYCLE_LENGTH_TICKS
     }
 
     fun getNextAbsoluteTimeOfCycleTick(cycleTick: Int): Int
