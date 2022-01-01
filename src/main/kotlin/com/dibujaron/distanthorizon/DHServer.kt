@@ -53,7 +53,7 @@ object DHServer {
     val serverPort = serverProperties.getProperty("server.port", "25611").toInt()
     val serverSecret = serverProperties.getProperty("server.secret", "debug")
     val maxPlayers = serverProperties.getProperty("max.players", "60").toInt()
-    val shipHeartbeatsEvery = serverProperties.getProperty("heartbeats.ship", "5").toInt()
+    val shipHeartbeatsEvery = serverProperties.getProperty("heartbeats.ship", "60").toInt()
     val shipHeartbeatsTickOffset = serverProperties.getProperty("heartbeats.ship.offset", "0").toInt()
     val worldHeartbeatsEvery = serverProperties.getProperty("heartbeats.world", "10").toInt()
     val worldHeartbeatsTickOffset = serverProperties.getProperty("heartbeats.world.offset", "0").toInt()
@@ -145,10 +145,8 @@ object DHServer {
         val tickTime = System.currentTimeMillis()
         val delta = tickTime - lastTickTime
         accumulator += delta
-        var count = 0
         while (accumulator >= TICK_LENGTH_MILLIS) {
             tick()
-            count++
             accumulator -= TICK_LENGTH_MILLIS
         }
         lastTickTime = tickTime

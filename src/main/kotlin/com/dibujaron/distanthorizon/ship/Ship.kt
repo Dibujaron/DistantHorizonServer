@@ -180,10 +180,13 @@ open class Ship(
         }
         return retval
     }
-
+    var lastHeartbeatTick = 0
     fun createShipHeartbeatJSON(): JSONObject {
         val retval = JSONObject()
+        val ticksSinceLastHeartbeat = DHServer.getTickCount() - lastHeartbeatTick
+        lastHeartbeatTick = DHServer.getTickCount()
         retval.put("id", uuid)
+        retval.put("ticks_since_last_heartbeat", ticksSinceLastHeartbeat)
         retval.put("velocity", currentState.velocity.toJSON())
         retval.put("global_pos", currentState.position.toJSON())
         retval.put("rotation", currentState.rotation)
