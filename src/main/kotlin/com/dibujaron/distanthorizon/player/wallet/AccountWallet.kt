@@ -1,18 +1,21 @@
 package com.dibujaron.distanthorizon.player.wallet
 
 import com.dibujaron.distanthorizon.DHServer
+import com.dibujaron.distanthorizon.background.BackgroundTaskManager
 import com.dibujaron.distanthorizon.database.persistence.ActorInfo
 
-class AccountWallet(myActorInitial: ActorInfo) : Wallet
+class AccountWallet(private val myActor: ActorInfo) : Wallet
 {
-    var actorCurrent = myActorInitial
+    var myBalance = myActor.balance
     override fun getBalance(): Int {
-        return actorCurrent.balance
+        return myBalance
     }
 
-    override fun setBalance(newBal: Int): Int {
-        actorCurrent = DHServer.getDatabase().getPersistenceDatabase().updateActorBalance(actorCurrent, newBal)!!
-        return actorCurrent.balance
+    override fun setBalance(newBal: Int) {
+        myBalance = newBal
+        BackgroundTaskManager.executeInBackground {
+            DHServer.getDatabase().getPersistenceDatabase().updateActorBalance(myActor, newBal)
+        }
     }
 
 }

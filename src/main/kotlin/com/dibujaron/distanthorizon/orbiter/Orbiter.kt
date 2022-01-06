@@ -77,8 +77,8 @@ abstract class Orbiter(private val parentName: String?, val name: String, val pr
     }
 
 
-    fun globalPos(): Vector2 {
-        return globalPosAtTick(0.0)
+    fun globalPosition(): Vector2 {
+        return globalPositionAtTick(0.0)
     }
 
     fun velocity(): Vector2 {
@@ -86,15 +86,15 @@ abstract class Orbiter(private val parentName: String?, val name: String, val pr
     }
 
     fun velocityAtTick(tickOffset: Double): Vector2 {
-        return (globalPosAtTick(tickOffset + 1) - globalPosAtTick(tickOffset)) * DHServer.TICKS_PER_SECOND
+        return (globalPositionAtTick(tickOffset + 1) - globalPositionAtTick(tickOffset)) * DHServer.TICKS_PER_SECOND
     }
 
-    fun globalPosAtTick(tickOffset: Double): Vector2 {
+    fun globalPositionAtTick(tickOffset: Double): Vector2 {
         val parent = this.parent
         return if (parent == null) {
             relativePos
         } else {
-            val parentPos = parent.globalPosAtTick(tickOffset)
+            val parentPos = parent.globalPositionAtTick(tickOffset)
             parentPos + relativePosAtTick(tickOffset)
         }
     }

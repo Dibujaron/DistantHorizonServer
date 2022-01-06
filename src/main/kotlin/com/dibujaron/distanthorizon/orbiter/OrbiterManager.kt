@@ -77,7 +77,7 @@ object OrbiterManager: DHModule {
         var accel = Vector2(0, 0)
         getPlanets().asSequence()
             .forEach {
-                val planetPosAtTick = it.globalPosAtTick(tickOffset)
+                val planetPosAtTick = it.globalPositionAtTick(tickOffset)
                 val offset = (planetPosAtTick - globalPosAtTick)
                 var rSquared = offset.lengthSquared
                 if (rSquared < it.minRadiusSquared) {

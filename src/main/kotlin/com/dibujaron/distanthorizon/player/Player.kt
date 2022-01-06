@@ -10,6 +10,7 @@ import com.dibujaron.distanthorizon.database.persistence.ShipInfo
 import com.dibujaron.distanthorizon.event.EventManager
 import com.dibujaron.distanthorizon.event.PlayerChatEvent
 import com.dibujaron.distanthorizon.login.PendingLoginManager
+import com.dibujaron.distanthorizon.orbiter.Orbiter
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.orbiter.OrbiterManager
 import com.dibujaron.distanthorizon.player.wallet.AccountWallet
@@ -53,8 +54,8 @@ class Player(val connection: WsContext) : CommandSender {
                 val db = DHServer.getDatabase().getPersistenceDatabase()
                 val myAccount = db.selectOrCreateAccount(username)
                 var myActor: ActorInfo
-                if (username == "Debug0000") {
-                    myActor = if (myAccount.actors.isEmpty()) {
+                myActor = if (username == "Debug0000") {
+                    if (myAccount.actors.isEmpty()) {
                         println("debug user has no actors, creating new.")
                         val newAcct = db.createNewActorForAccount(myAccount, "debug")
                         newAcct!!.actors.first()
@@ -63,7 +64,7 @@ class Player(val connection: WsContext) : CommandSender {
                         myAccount.actors.first()
                     }
                 } else {
-                    myActor = myAccount.actors.find { it.uniqueID == actorID }!!
+                    myAccount.actors.find { it.uniqueID == actorID }!!
                 }
                 println("actor name is ${myActor.displayName}")
                 accountInfo = myAccount
@@ -137,8 +138,7 @@ class Player(val connection: WsContext) : CommandSender {
         val messageType = message.getString("message_type")
         if (messageType == "init") {
             processClientFirstMessage(message)
-        }
-        if (messageType == "ship_inputs") {
+        } else if (messageType == "ship_inputs") {
             val inputs = ShipInputs(message)
             ship.receiveInputChange(inputs)
         } else if (messageType == "dock") {
@@ -151,7 +151,7 @@ class Player(val connection: WsContext) : CommandSender {
             }
         } else if (messageType == "undock") {
             if (ship.isDocked()) {
-                ship.undock()
+                ship.unDock()
                 queueSendStationMenuMessage()
             } else {
                 queueChatMsg("Ship is not docked?")
@@ -172,8 +172,17 @@ class Player(val connection: WsContext) : CommandSender {
                 println("${getDisplayName()} sold $quantity of $commodity from station, new balance is ${wallet.getBalance()}")
                 queueSendStationMenuMessage()
             }
+        } else if (messageType == "load_passengers") {
+            println("got load passengers message")
+            if (ship.isDocked()) {
+                val quantity = message.getInt("quantity")
+                val destination = message.getString("destination_station")
+                val destinationStation = OrbiterManager.getStationByName(destination)!!
+                ship.loadPassengers(destinationStation, quantity)
+                queueSendStationMenuMessage()
+            }
         } else if (messageType == "purchase_fuel") {
-            if(ship.isDocked()){
+            if (ship.isDocked()) {
                 val quantity = message.getInt("quantity")
                 ship.purchaseFuelFromStation(wallet, quantity)
                 queueSendStationMenuMessage()
@@ -193,13 +202,15 @@ class Player(val connection: WsContext) : CommandSender {
             val color2 = ShipColor.fromJSON(message.getJSONObject("secondary_color"))
             val newShipClass = ShipClassManager.getShipClass(qualName)!!
             val oldShipClass = ship.type
-            var cost = newShipClass.getPurchaseCost(oldShipClass)
+            val cost = newShipClass.getPurchaseCost(oldShipClass)
             val newBalance = wallet.getBalance() - cost
             if (newBalance > 0) {
                 wallet.setBalance(newBalance)
                 updateShip(ShipClassManager.getShipClass(qualName)!!, name, ColorScheme(color1, color2))
             }
             queueSendStationMenuMessage()
+        } else {
+            println("error unknown message type $messageType")
         }
     }
 
@@ -217,7 +228,17 @@ class Player(val connection: WsContext) : CommandSender {
         }
         val newHold: MutableMap<CommodityType, Int> = EnumMap(CommodityType::class.java)
         val newPassengers: MutableList<EmbarkedPassengerGroup> = LinkedList()
-        val newShip = Ship(dbHook, shipClass, name, colorScheme, newHold, newPassengers, shipClass.fuelTankSize.toDouble(), ship.currentState, this)
+        val newShip = Ship(
+            dbHook,
+            shipClass,
+            name,
+            colorScheme,
+            newHold,
+            newPassengers,
+            shipClass.fuelTankSize.toDouble(),
+            ship.currentState,
+            this
+        )
         val oldShip = ship
         ship = newShip
         //newShip.currentState = oldShip.currentState //todo why was this done here? originally ship.currentState above was getStartingOrbit()
@@ -240,6 +261,7 @@ class Player(val connection: WsContext) : CommandSender {
             myMessage.put("station_info", stationInfo)
             myMessage.put("player_balance", wallet.getBalance())
             myMessage.put("hold_space", ship.holdCapacity - ship.holdOccupied())
+            myMessage.put("passenger_space", ship.passengerCapacity - ship.getLoadedPassengerCount())
             myMessage.put("fuel_tank_size", ship.type.fuelTankSize)
             myMessage.put("fuel_level", ship.fuelLevel)
             val holdInfo: JSONObject = ship.createHoldStatusMessage()
@@ -263,9 +285,9 @@ class Player(val connection: WsContext) : CommandSender {
         queueMessage(myMessage)
     }
 
-    fun queueShipUndockedMsg(shipUndockedMessage: JSONObject) {
+    fun queueShipUnDockedMsg(shipUnDockedMessage: JSONObject) {
         val myMessage = createMessage("ship_undocked")
-        myMessage.put("ship_undocked", shipUndockedMessage);
+        myMessage.put("ship_undocked", shipUnDockedMessage);
         queueMessage(myMessage)
     }
 
@@ -293,7 +315,14 @@ class Player(val connection: WsContext) : CommandSender {
         queueMessage(myMessage)
     }
 
-    fun queueShipAIChatMsg(message: String) {
+    fun queueEarnedMoneyMessage(amount: Int) {
+        val myMessage = createMessage("money_earned")
+        myMessage.put("money_earned", amount)
+        print("sending money earned message.")
+        queueMessage(myMessage)
+    }
+
+    private fun queueShipAIChatMsg(message: String) {
         queueChatMsg("[${companionAI.getName()}]", message)
     }
 

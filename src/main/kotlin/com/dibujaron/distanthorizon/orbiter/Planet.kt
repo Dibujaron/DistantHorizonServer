@@ -37,7 +37,7 @@ class Planet(parentName: String?, planetName: String, properties: Properties): O
 
     fun getStableOrbit(radius: Double): ShipState
     {
-        val planetPos = this.globalPos()
+        val planetPos = this.globalPosition()
         val offset = Vector2(radius, 0)
         val startingPos = planetPos + offset
         val g = OrbiterManager.GRAVITY_CONSTANT

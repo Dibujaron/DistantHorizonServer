@@ -1,6 +1,8 @@
 package com.dibujaron.distanthorizon.utils
 
 import com.dibujaron.distanthorizon.DHServer
+import com.dibujaron.distanthorizon.Vector2
+import kotlin.math.sqrt
 
 object TimeUtils {
 
@@ -43,5 +45,16 @@ object TimeUtils {
 
     fun secondsToTicks(seconds: Double): Double {
         return seconds * DHServer.TICKS_PER_SECOND
+    }
+
+    fun idealTravelTimeSeconds(first: Vector2, second: Vector2, acceleration: Double): Double
+    {
+        val distance = (first - second).length
+        return idealTravelTimeSeconds(distance, acceleration)
+    }
+
+    fun idealTravelTimeSeconds(distance: Double, acceleration: Double): Double
+    {
+        return 2 * sqrt(distance / acceleration)
     }
 }

@@ -13,6 +13,7 @@ import com.dibujaron.distanthorizon.docking.StationDockingPort
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.orbiter.OrbiterManager
 import com.dibujaron.distanthorizon.orbiter.Planet
+import com.dibujaron.distanthorizon.orbiter.station.Station
 import com.dibujaron.distanthorizon.player.Player
 import com.dibujaron.distanthorizon.player.PlayerManager
 import com.dibujaron.distanthorizon.player.wallet.Wallet
@@ -22,7 +23,7 @@ import kotlin.math.min
 import kotlin.math.pow
 
 open class Ship(
-    val dbHook: ShipInfo?,
+    private val dbHook: ShipInfo?,
     val type: ShipClass,
     val name: String,
     private val colorScheme: ColorScheme,
@@ -30,7 +31,7 @@ open class Ship(
     private val passengers: MutableList<EmbarkedPassengerGroup>,
     var fuelLevel: Double,
     initialState: ShipState,
-    val pilot: Player?
+    private val pilot: Player?
 ) {
 
     constructor(
@@ -53,16 +54,20 @@ open class Ship(
     )
 
     var currentState: ShipState = initialState
-    val uuid = UUID.randomUUID()
+    val uuid: UUID = UUID.randomUUID()
 
     //controls
-    val myDockingPorts = type.dockingPorts.asSequence().map { ShipDockingPort(this, it) }.toList()
+    val myDockingPorts = type.dockingPorts.map { ShipDockingPort(this, it) }
     var dockedToPort: StationDockingPort? = null
     var myDockedPort: ShipDockingPort? = null
 
-    var holdCapacity = type.holdSize
+    val holdCapacity = type.holdSize
+    val passengerCapacity = type.passengerCapacity
 
     var scriptWriter: ScriptWriter? = null
+
+    var currentJourneyTicks = 0
+    var currentJourneyTicksUnderAcceleration = 0
 
     fun holdOccupied(): Int {
         return hold.values.asSequence().sum()
@@ -77,8 +82,9 @@ open class Ship(
         val newAmt = existing + delta
         hold[ct] = newAmt
         if (dbHook != null) {
-            DHServer.getDatabase().getPersistenceDatabase().updateShipHold(dbHook, ct, newAmt)
-            //todo some form of verification that we're still in sync.
+            BackgroundTaskManager.executeInBackground {
+                DHServer.getDatabase().getPersistenceDatabase().updateShipHold(dbHook, ct, newAmt)
+            }
         }
     }
 
@@ -87,7 +93,9 @@ open class Ship(
         println("Bought $delta fuel, level was $fuelLevel, new level is $newLevel")
         fuelLevel = newLevel
         if (dbHook != null) {
-            DHServer.getDatabase().getPersistenceDatabase().updateShipFuelLevel(dbHook, fuelLevel)
+            BackgroundTaskManager.executeInBackground {
+                DHServer.getDatabase().getPersistenceDatabase().updateShipFuelLevel(dbHook, fuelLevel)
+            }
         }
     }
 
@@ -125,6 +133,7 @@ open class Ship(
 
     private var controls: ShipInputs = ShipInputs()
     open fun computeNextState(): ShipState {
+        currentJourneyTicks++
         val delta = DHServer.TICK_LENGTH_SECONDS
         var velocity = currentState.velocity
         var globalPos = currentState.position
@@ -133,6 +142,7 @@ open class Ship(
         if (fuelLevel > 0) {
             if (controls.mainEnginesActive) {
                 velocity += Vector2(0, -type.mainThrust).rotated(rotation) * delta
+                currentJourneyTicksUnderAcceleration++
             }
         }
         if (controls.stbdThrustersActive) {
@@ -180,6 +190,7 @@ open class Ship(
         }
         return retval
     }
+
     var lastHeartbeatTick = 0
     fun createShipHeartbeatJSON(): JSONObject {
         val retval = JSONObject()
@@ -240,6 +251,9 @@ open class Ship(
     fun dock(shipPort: ShipDockingPort, stationPort: StationDockingPort, updateLastDocked: Boolean = true) {
         this.myDockedPort = shipPort
         this.dockedToPort = stationPort
+        this.unloadPassengers(stationPort.station)
+        currentJourneyTicks = 0
+        currentJourneyTicksUnderAcceleration = 0
         DHServer.broadcastShipDocked(this)
         BackgroundTaskManager.executeInBackground {
             val database = DHServer.getDatabase()
@@ -278,7 +292,38 @@ open class Ship(
         }
     }
 
-    fun undock() {
+    private fun unloadPassengers(dockedToStation: Station) {
+        var totalReward = 0
+        var totalUnloaded = 0
+        val iterator = passengers.iterator()
+        while (iterator.hasNext()) {
+            val passengerGroup = iterator.next()
+            if (passengerGroup.destinationStation == dockedToStation.key) {
+                val reward = passengerGroup.calculateReward(this, dockedToStation)
+                totalReward += reward
+                iterator.remove()
+                totalUnloaded += passengerGroup.quantity
+            }
+        }
+        val hook = dbHook
+        if (hook != null) {
+            BackgroundTaskManager.executeInBackground {
+                DHServer.getDatabase().getPersistenceDatabase().clearPassengersToStation(hook, dockedToStation.key)
+            }
+        }
+        if (pilot != null) {
+            println("${pilot.getDisplayName()} unloaded $totalUnloaded passengers for a reward of $$totalReward.")
+        }
+        if (totalReward > 0) {
+            pilot?.wallet?.let {
+                val newBalance = it.getBalance() + totalReward
+                it.setBalance(newBalance)
+            }
+            pilot?.queueEarnedMoneyMessage(totalReward)
+        }
+    }
+
+    fun unDock() {
         val dockedTo = dockedToPort
         if (dockedTo != null) {
             DHServer.broadcastShipUndocked(this)
@@ -333,25 +378,45 @@ open class Ship(
         }
     }
 
+    //todo this is not useful, needs to be since the passengers were loaded, not just current journey
+    fun getCurrentJourneyAccelerationRatio(): Double {
+        return if (currentJourneyTicks > 0 && currentJourneyTicksUnderAcceleration > 0) {
+            currentJourneyTicksUnderAcceleration.toDouble() / currentJourneyTicks
+        } else {
+            1.0
+        }
+    }
 
-    fun loadPassengers(destStation: StationKey, loadQuantity: Int) {
+    fun getLoadedPassengerCount(): Int {
+        return passengers.asSequence().map { it.quantity }.sum()
+    }
+
+    fun loadPassengers(destinationStation: Station, loadQuantity: Int) {
         if (isDocked()) {
             val station = dockedToPort!!.station
             val waitingRoom = station.waitingRoom
             val waitingPassengers = waitingRoom.waitingPassengers
-            val existingQuantity = waitingPassengers[destStation] ?: 0
+            val existingQuantity = waitingPassengers[destinationStation.key] ?: 0
             val newLoadQuantity = min(existingQuantity, loadQuantity)
-            val newWaitingQuantity = existingQuantity - newLoadQuantity
-            waitingPassengers[destStation] = newWaitingQuantity
+            val remainingCapacity = type.passengerCapacity - getLoadedPassengerCount()
+            val finalLoadQuantity = min(newLoadQuantity, remainingCapacity)
+            val newWaitingQuantity = existingQuantity - finalLoadQuantity
+            if (newWaitingQuantity > 0) {
+                waitingPassengers[destinationStation.key] = newWaitingQuantity
+            } else {
+                waitingPassengers.remove(destinationStation.key)
+            }
             val embarkLocation = currentState.position
             val embarkTime = System.currentTimeMillis()
             val embarkedPassengerGroup = EmbarkedPassengerGroup(
                 station.key,
                 embarkLocation,
                 embarkTime,
-                destStation,
-                newLoadQuantity
+                destinationStation.key,
+                finalLoadQuantity
             )
+            println("${pilot?.getDisplayName()} intended to load $loadQuantity, actually loaded $finalLoadQuantity passengers bound for ${destinationStation.name}.")
+            println("old waiting quantity was $existingQuantity, new waiting quantity is $newWaitingQuantity.")
             passengers.add(embarkedPassengerGroup)
             val hook = dbHook
             if (hook != null) {
@@ -360,10 +425,10 @@ open class Ship(
                         .movePassengersFromStationToShip(
                             hook,
                             station.key,
-                            destStation,
+                            destinationStation.key,
                             embarkLocation,
                             embarkTime,
-                            newLoadQuantity
+                            finalLoadQuantity
                         )
                 }
             }
@@ -409,7 +474,7 @@ open class Ship(
             val startingPlanet: Planet = OrbiterManager.getPlanet(startingPlanetName)
                 ?: throw IllegalArgumentException("starting planet $startingPlanetName is null.")
             val offset = Vector2(-DHServer.startingOrbitalRadius, 0)
-            val planetPos = startingPlanet.globalPos()
+            val planetPos = startingPlanet.globalPosition()
             val startingPos = planetPos + offset
             val startingVelocity = Vector2(DHServer.startingOrbitalSpeed, 0)
             val rotation = 0.0

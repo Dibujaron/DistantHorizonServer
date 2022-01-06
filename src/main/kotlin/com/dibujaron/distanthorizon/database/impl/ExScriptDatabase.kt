@@ -192,13 +192,13 @@ class ExScriptDatabase : ScriptDatabase {
     }
 
     override fun beginLoggingScript(
-        actorInfo: ActorInfo?,
+        actor: ActorInfo?,
         sourceStation: StationKey,
         startState: ShipState,
         shipClass: ShipClass
     ): ScriptWriter {
-        println("Beginning script logging for ${actorInfo?.displayName}")
-        return RelationalScriptWriter(actorInfo, sourceStation, startState, shipClass)
+        println("Beginning script logging for ${actor?.displayName}")
+        return RelationalScriptWriter(actor, sourceStation, startState, shipClass)
     }
 
     inner class RelationalScriptWriter(

@@ -10,7 +10,7 @@ import com.dibujaron.distanthorizon.login.PendingLoginManager
 import com.dibujaron.distanthorizon.orbiter.OrbiterManager
 import com.dibujaron.distanthorizon.orbiter.station.Station
 import com.dibujaron.distanthorizon.orbiter.station.hold.dynamic.DynamicEconomyManager
-import com.dibujaron.distanthorizon.orbiter.station.passenger.WaitingRoomManager
+import com.dibujaron.distanthorizon.passenger.PassengerManager
 import com.dibujaron.distanthorizon.player.Player
 import com.dibujaron.distanthorizon.player.PlayerManager
 import com.dibujaron.distanthorizon.ship.Ship
@@ -78,7 +78,7 @@ object DHServer {
         BackgroundTaskManager,
         OrbiterManager,
         PlayerManager,
-        WaitingRoomManager,
+        PassengerManager,
         BalancerPingManager,
         ShipManager
     )
@@ -310,7 +310,7 @@ object DHServer {
 
     fun broadcastShipUndocked(ship: Ship) {
         val undockedMessage = ship.createShipHeartbeatJSON()
-        PlayerManager.getPlayers().forEach { it.queueShipUndockedMsg(undockedMessage) }
+        PlayerManager.getPlayers().forEach { it.queueShipUnDockedMsg(undockedMessage) }
     }
 
     private fun onSocketError(conn: WsErrorContext) {

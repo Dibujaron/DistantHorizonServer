@@ -2,7 +2,7 @@ package com.dibujaron.distanthorizon.player.wallet
 
 import com.dibujaron.distanthorizon.DHServer
 
-class GuestWallet() : Wallet
+class GuestWallet : Wallet
 {
     var bal = DHServer.startingBalance
 
@@ -10,8 +10,7 @@ class GuestWallet() : Wallet
         return bal
     }
 
-    override fun setBalance(newBal: Int): Int {
+    override fun setBalance(newBal: Int) {
         bal = newBal
-        return bal
     }
 }

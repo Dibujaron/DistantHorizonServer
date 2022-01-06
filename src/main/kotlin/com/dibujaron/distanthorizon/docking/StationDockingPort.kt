@@ -7,7 +7,7 @@ class StationDockingPort(val station: Station, val relativePos: Vector2, val rot
     val relativeRotation = Math.toRadians(rotationDegrees)
 
     override fun globalPosition(): Vector2 {
-        return station.globalPos() + relativePos.rotated(station.globalRotation())
+        return station.globalPosition() + relativePos.rotated(station.globalRotation())
     }
 
     override fun getVelocity(): Vector2 {

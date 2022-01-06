@@ -274,12 +274,15 @@ class ExPersistenceDatabase : PersistenceDatabase {
                         .map { mapActorInfo(it) }
                         .first()
                 }
+            } else {
+                throw java.lang.IllegalStateException("Object must be from same db")
             }
+        } else {
+            throw java.lang.IllegalStateException("Object must be from same db")
         }
-        throw java.lang.IllegalStateException("Object must be from same db")
     }
 
-    override fun updateActorBalance(actor: ActorInfo, newBal: Int): ActorInfo? {
+    override fun updateActorBalance(actor: ActorInfo, newBal: Int) {
         if (actor is ActorInfoInternal) {
             val actorIdFilter = (ExDatabase.Actor.id eq actor.id)
             transaction {
@@ -287,20 +290,12 @@ class ExPersistenceDatabase : PersistenceDatabase {
                     it[balance] = newBal
                 }
             }
-            return transaction {
-                ExDatabase.Actor.join(
-                    ExDatabase.Ship,
-                    JoinType.INNER,
-                    additionalConstraint = { ExDatabase.Actor.currentShip eq ExDatabase.Ship.id })
-                    .select { ExDatabase.Actor.id eq actor.id }
-                    .map { mapActorInfo(it) }
-                    .first()
-            }
+        } else {
+            throw java.lang.IllegalStateException("Object must be from same db")
         }
-        throw java.lang.IllegalStateException("Object must be from same db")
     }
 
-    override fun updateActorDockedStation(actor: ActorInfo, station: StationKey): ActorInfo? {
+    override fun updateActorDockedStation(actor: ActorInfo, station: StationKey) {
         if (actor is ActorInfoInternal) {
             val actorIdFilter = (ExDatabase.Actor.id eq actor.id)
             transaction {
@@ -308,17 +303,9 @@ class ExPersistenceDatabase : PersistenceDatabase {
                     it[lastDockedStation] = (station as StationKeyInternal).id
                 }
             }
-            return transaction {
-                ExDatabase.Actor.join(
-                    ExDatabase.Ship,
-                    JoinType.INNER,
-                    additionalConstraint = { ExDatabase.Actor.currentShip eq ExDatabase.Ship.id })
-                    .select { ExDatabase.Actor.id eq actor.id }
-                    .map { mapActorInfo(it) }
-                    .first()
-            }
+        } else {
+            throw java.lang.IllegalStateException("Object must be from same db")
         }
-        throw java.lang.IllegalStateException("Object must be from same db")
     }
 
     override fun updateShipFuelLevel(ship: ShipInfo, newFuelLevel: Double) {
@@ -416,7 +403,7 @@ class ExPersistenceDatabase : PersistenceDatabase {
         val targetStationFilter =
             (ExDatabase.StationPassengerGroup.destinationStation eq (destStation as StationKeyInternal).id)
         transaction {
-            val groups = ExDatabase.Account
+            val groups = ExDatabase.StationPassengerGroup
                 .select { sourceStationFilter and targetStationFilter }
                 .orderBy(ExDatabase.StationPassengerGroup.waitingSince, SortOrder.ASC)
                 .map { mapWaitingPassengerGroupInfo(it) }

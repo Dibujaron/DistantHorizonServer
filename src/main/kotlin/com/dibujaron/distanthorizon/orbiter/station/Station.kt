@@ -31,7 +31,7 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
     val dockingPorts = LinkedList<StationDockingPort>()
     private val splashTextList = ArrayList<String>()
     private val dealerships = HashMap<Manufacturer, Int>()
-    private val navigable = properties.getProperty("navigable", "true").toBoolean()
+    val navigable = properties.getProperty("navigable", "true").toBoolean()
     private val fuelPrice = properties.getProperty("fuel.price").toDouble()
     private var aiScripts: MutableMap<Int, MutableSet<ScriptReader>> = ConcurrentHashMap()
 
@@ -80,7 +80,9 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
         hold.tick()
         waitingRoom.tick()
         aiScripts.getOrElse(TimeUtils.getCurrentTickInCycle()) { setOf() }.forEach {
-            ShipManager.addShip(AIShip(it.copy()))
+            if (ShipManager.getShips().size < DHServer.maxPlayers) {
+                ShipManager.addShip(AIShip(it.copy()))
+            }
         }
 
     }
@@ -99,6 +101,7 @@ class Station(parentName: String?, stationName: String, properties: Properties) 
         retval.put("description", splashTextList.random(rand))
         retval.put("fuel_price", fuelPrice)
         retval.put("commodity_stores", hold.toJSON())
+        retval.put("waiting_passengers", waitingRoom.toJSON())
         val dealershipJson = JSONArray()
         Manufacturer.values().forEach {
             val percent = dealerships[it]

@@ -30,6 +30,7 @@ class ShipClass(
     val holdSize: Int = properties.getProperty("holdSize").toInt()
     val price: Int = properties.getProperty("price").toInt()
     val fuelTankSize: Int = properties.getProperty("fuelTankSize").toInt()
+    val passengerCapacity: Int = properties.getProperty("passengerCapacity").toInt()
     val fuelBurnRatePerSecond: Double = properties.getProperty("fuelBurnRate").toDouble()
     val fuelBurnRatePerTick = fuelBurnRatePerSecond / 20
     val dockingPorts = generateSequence(0) { it + 1 }
@@ -44,15 +45,15 @@ class ShipClass(
         }
         .map { ShipClassDockingPort(it.first, it.second) }.toList()
 
-    val primaryCount: Int = properties.getProperty("primaryCount").toInt()
-    val primaryColors = generateSequence(0) { it + 1 }
+    private val primaryCount: Int = properties.getProperty("primaryCount").toInt()
+    private val primaryColors = generateSequence(0) { it + 1 }
         .take(primaryCount)
         .map {
             ShipColor.fromHexString(properties.getProperty("color.primary.$it").toString())
         }.toList()
 
-    val secondaryCount: Int = properties.getProperty("secondaryCount").toInt()
-    val secondaryColors = generateSequence(0) { it + 1 }
+    private val secondaryCount: Int = properties.getProperty("secondaryCount").toInt()
+    private val secondaryColors = generateSequence(0) { it + 1 }
         .take(secondaryCount)
         .map {
             ShipColor.fromHexString(properties.getProperty("color.secondary.$it").toString())
@@ -69,6 +70,7 @@ class ShipClass(
         retval.put("rotation_power", rotationPower)
         retval.put("price", getPurchaseCost(player.ship.type))
         retval.put("fuel_tank_size", fuelTankSize)
+        retval.put("passenger_capacity", passengerCapacity)
         val colorsJson = JSONArray()
         for (primaryColor in primaryColors) {
             for (secondaryColor in secondaryColors) {
