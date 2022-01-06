@@ -10,7 +10,6 @@ import com.dibujaron.distanthorizon.database.persistence.ShipInfo
 import com.dibujaron.distanthorizon.event.EventManager
 import com.dibujaron.distanthorizon.event.PlayerChatEvent
 import com.dibujaron.distanthorizon.login.PendingLoginManager
-import com.dibujaron.distanthorizon.orbiter.Orbiter
 import com.dibujaron.distanthorizon.orbiter.station.hold.CommodityType
 import com.dibujaron.distanthorizon.orbiter.OrbiterManager
 import com.dibujaron.distanthorizon.player.wallet.AccountWallet
@@ -262,6 +261,7 @@ class Player(val connection: WsContext) : CommandSender {
             myMessage.put("player_balance", wallet.getBalance())
             myMessage.put("hold_space", ship.holdCapacity - ship.holdOccupied())
             myMessage.put("passenger_space", ship.passengerCapacity - ship.getLoadedPassengerCount())
+            myMessage.put("passenger_destinations", ship.createPassengerDestinationsMessage())
             myMessage.put("fuel_tank_size", ship.type.fuelTankSize)
             myMessage.put("fuel_level", ship.fuelLevel)
             val holdInfo: JSONObject = ship.createHoldStatusMessage()

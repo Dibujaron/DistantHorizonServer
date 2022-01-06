@@ -17,6 +17,7 @@ import com.dibujaron.distanthorizon.orbiter.station.Station
 import com.dibujaron.distanthorizon.player.Player
 import com.dibujaron.distanthorizon.player.PlayerManager
 import com.dibujaron.distanthorizon.player.wallet.Wallet
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
 import kotlin.math.min
@@ -319,6 +320,9 @@ open class Ship(
                 val newBalance = it.getBalance() + totalReward
                 it.setBalance(newBalance)
             }
+        }
+        if(totalUnloaded > 0){
+            //send even if it's 0 so they understand.
             pilot?.queueEarnedMoneyMessage(totalReward)
         }
     }
@@ -389,6 +393,17 @@ open class Ship(
 
     fun getLoadedPassengerCount(): Int {
         return passengers.asSequence().map { it.quantity }.sum()
+    }
+
+    fun createPassengerDestinationsMessage(): JSONArray {
+        val retval = JSONArray()
+        passengers.asSequence()
+            .map { it.destinationStation }
+            .distinct()
+            .map { OrbiterManager.getStationByKey(it)!! }
+            .map { it.displayName }
+            .forEach { retval.put(it) }
+        return retval
     }
 
     fun loadPassengers(destinationStation: Station, loadQuantity: Int) {
