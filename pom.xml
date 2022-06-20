@@ -35,7 +35,7 @@
         </plugins>
     </build>
     <properties>
-        <kotlin.version>1.4.21</kotlin.version>
+        <kotlin.version>1.6.0</kotlin.version>
         <exposed.version>0.21.1</exposed.version>
     </properties>
     <repositories>
